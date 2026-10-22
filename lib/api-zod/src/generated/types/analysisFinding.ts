@@ -16,4 +16,6 @@ export interface AnalysisFinding {
   recommendedAction: string;
   /** @nullable */
   evidenceUrl: string | null;
+  /** @nullable */
+  evidenceExcerpt?: string | null;
 }

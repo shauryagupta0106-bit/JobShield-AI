@@ -27,12 +27,14 @@ import { createJobShieldRateLimit } from "../lib/jobshield/rate-limit";
 
 const router: IRouter = Router();
 const RETENTION_DAYS = 30;
+
 const limitAnalysis = createJobShieldRateLimit({
   scope: "analysis",
   windowMs: 15 * 60 * 1000,
   maxRequests: 10,
   message: "Too many analyses were submitted from this connection. Please try again later.",
 });
+
 const limitSearch = createJobShieldRateLimit({
   scope: "search",
   windowMs: 15 * 60 * 1000,
@@ -45,6 +47,34 @@ router.use((_request, response, next) => {
   response.setHeader("X-Content-Type-Options", "nosniff");
   next();
 });
+
+// In-memory fallback store to ensure seamless local resilience when database is temporarily offline or undergoing migration
+type SessionAnalysisRecord = {
+  id: string;
+  sessionHash: string;
+  sourceType: "url" | "text" | "pdf";
+  sourceLabel: string;
+  companyName: string | null;
+  jobTitle: string | null;
+  overallAssessment:
+    | "evidence_of_concern"
+    | "conflicting_evidence"
+    | "no_major_warnings"
+    | "insufficient_evidence";
+  assessmentRationale: string;
+  verificationStatus:
+    | "official_match"
+    | "partial_match"
+    | "no_match"
+    | "unable_to_verify"
+    | "material_discrepancy";
+  findingCount: number;
+  report: Record<string, unknown>;
+  createdAt: Date;
+  expiresAt: Date;
+};
+
+const memoryStore = new Map<string, SessionAnalysisRecord>();
 
 function requireSession(
   request: Request,
@@ -61,35 +91,105 @@ function requireSession(
 }
 
 async function purgeExpiredAnalyses(): Promise<void> {
-  await db
-    .delete(jobShieldAnalysesTable)
-    .where(lte(jobShieldAnalysesTable.expiresAt, new Date()));
+  const now = new Date();
+  for (const [id, item] of memoryStore.entries()) {
+    if (item.expiresAt <= now) {
+      memoryStore.delete(id);
+    }
+  }
+
+  try {
+    await db
+      .delete(jobShieldAnalysesTable)
+      .where(lte(jobShieldAnalysesTable.expiresAt, now));
+  } catch {
+    // Database cleanup is best-effort and must not fail user requests
+  }
 }
 
 async function saveReport(
   sessionHash: string,
   report: ReturnType<typeof AnalyzeSubmissionResponse.parse>,
+  request: Request,
 ): Promise<void> {
   const now = new Date();
-  await db.insert(jobShieldAnalysesTable).values({
+  const expiresAt = new Date(now.getTime() + RETENTION_DAYS * 24 * 60 * 60 * 1000);
+  const plainReport = JSON.parse(JSON.stringify(report)) as Record<string, unknown>;
+
+  // Always store in session cache
+  memoryStore.set(report.id, {
     id: report.id,
     sessionHash,
     sourceType: report.sourceType,
     sourceLabel: report.sourceLabel,
-    companyName: report.companyName,
-    jobTitle: report.jobTitle,
-    riskScore: report.riskScore,
-    riskLevel: report.riskLevel,
+    companyName: report.companyName ?? null,
+    jobTitle: report.jobTitle ?? null,
+    overallAssessment: report.overallAssessment,
+    assessmentRationale: report.assessmentRationale,
     verificationStatus: report.verificationStatus,
     findingCount: report.findings.length,
-    report: JSON.parse(JSON.stringify(report)) as Record<string, unknown>,
-    expiresAt: new Date(now.getTime() + RETENTION_DAYS * 24 * 60 * 60 * 1000),
+    report: plainReport,
+    createdAt: now,
+    expiresAt,
   });
+
+  // Attempt database persistence
+  try {
+    await db.insert(jobShieldAnalysesTable).values({
+      id: report.id,
+      sessionHash,
+      sourceType: report.sourceType,
+      sourceLabel: report.sourceLabel,
+      companyName: report.companyName,
+      jobTitle: report.jobTitle,
+      overallAssessment: report.overallAssessment,
+      assessmentRationale: report.assessmentRationale,
+      verificationStatus: report.verificationStatus,
+      findingCount: report.findings.length,
+      report: plainReport,
+      createdAt: now,
+      expiresAt,
+    });
+  } catch (dbError) {
+    request.log.warn(
+      { err: dbError },
+      "Database insert unavailable; report preserved in session store.",
+    );
+  }
 }
 
 function toSummary(
-  row: typeof jobShieldAnalysesTable.$inferSelect,
+  row:
+    | typeof jobShieldAnalysesTable.$inferSelect
+    | SessionAnalysisRecord,
 ) {
+  let assessment:
+    | "evidence_of_concern"
+    | "conflicting_evidence"
+    | "no_major_warnings"
+    | "insufficient_evidence" = "insufficient_evidence";
+
+  if ("overallAssessment" in row && row.overallAssessment) {
+    assessment = row.overallAssessment as typeof assessment;
+  } else if ("riskLevel" in row && row.riskLevel) {
+    if (row.riskLevel === "elevated") assessment = "evidence_of_concern";
+    else if (row.riskLevel === "moderate") assessment = "conflicting_evidence";
+    else if (row.riskLevel === "lower") assessment = "no_major_warnings";
+    else assessment = "insufficient_evidence";
+  }
+
+  let rationale = ("assessmentRationale" in row ? row.assessmentRationale : null) || "";
+  if (!rationale) {
+    rationale =
+      assessment === "evidence_of_concern"
+        ? "Warning signals detected in opportunity."
+        : assessment === "conflicting_evidence"
+          ? "Conflicting or unverified claims detected."
+          : assessment === "no_major_warnings"
+            ? "No major warnings detected in the checks performed."
+            : "Insufficient evidence to assess.";
+  }
+
   return {
     id: row.id,
     createdAt: row.createdAt,
@@ -97,8 +197,8 @@ function toSummary(
     sourceLabel: row.sourceLabel,
     companyName: row.companyName,
     jobTitle: row.jobTitle,
-    riskScore: row.riskScore,
-    riskLevel: row.riskLevel,
+    overallAssessment: assessment,
+    assessmentRationale: rationale,
     verificationStatus: row.verificationStatus,
     findingCount: row.findingCount,
   };
@@ -137,7 +237,7 @@ router.post("/analyze", limitAnalysis, async (request, response): Promise<void> 
       roleHint: parsed.data.roleHint,
     });
     const validated = AnalyzeSubmissionResponse.parse(report);
-    await saveReport(sessionHash, validated);
+    await saveReport(sessionHash, validated, request);
     response.status(200).json(validated);
   } catch (error) {
     handleFailure(request, response, error);
@@ -165,7 +265,7 @@ router.post("/analyze-url", limitAnalysis, async (request, response): Promise<vo
       roleHint: parsed.data.roleHint,
     });
     const validated = AnalyzeUrlResponse.parse(report);
-    await saveReport(sessionHash, validated);
+    await saveReport(sessionHash, validated, request);
     response.status(200).json(validated);
   } catch (error) {
     if (error instanceof Error && /public|valid|resolve|supported/i.test(error.message)) {
@@ -188,27 +288,58 @@ router.get("/analyses", async (request, response): Promise<void> => {
   try {
     await purgeExpiredAnalyses();
     const { q, limit } = parsed.data;
-    const filters = [
-      eq(jobShieldAnalysesTable.sessionHash, sessionHash),
-      gt(jobShieldAnalysesTable.expiresAt, new Date()),
-    ];
-    if (q?.trim()) {
-      const pattern = `%${q.trim().replace(/[%_\\]/g, "\\$&")}%`;
-      filters.push(
-        or(
-          ilike(jobShieldAnalysesTable.sourceLabel, pattern),
-          ilike(jobShieldAnalysesTable.companyName, pattern),
-          ilike(jobShieldAnalysesTable.jobTitle, pattern),
-        )!,
-      );
+
+    let dbRows: Array<typeof jobShieldAnalysesTable.$inferSelect> = [];
+    let dbSuccess = false;
+
+    try {
+      const filters = [
+        eq(jobShieldAnalysesTable.sessionHash, sessionHash),
+        gt(jobShieldAnalysesTable.expiresAt, new Date()),
+      ];
+      if (q?.trim()) {
+        const pattern = `%${q.trim().replace(/[%_\\]/g, "\\$&")}%`;
+        filters.push(
+          or(
+            ilike(jobShieldAnalysesTable.sourceLabel, pattern),
+            ilike(jobShieldAnalysesTable.companyName, pattern),
+            ilike(jobShieldAnalysesTable.jobTitle, pattern),
+          )!,
+        );
+      }
+      dbRows = await db
+        .select()
+        .from(jobShieldAnalysesTable)
+        .where(and(...filters))
+        .orderBy(desc(jobShieldAnalysesTable.createdAt))
+        .limit(limit);
+      dbSuccess = true;
+    } catch {
+      dbSuccess = false;
     }
-    const rows = await db
-      .select()
-      .from(jobShieldAnalysesTable)
-      .where(and(...filters))
-      .orderBy(desc(jobShieldAnalysesTable.createdAt))
-      .limit(limit);
-    response.json(ListAnalysesResponse.parse(rows.map(toSummary)));
+
+    if (dbSuccess && dbRows.length > 0) {
+      response.json(ListAnalysesResponse.parse(dbRows.map(toSummary)));
+      return;
+    }
+
+    // Fall back to memoryStore for this session if database query was empty or offline
+    const now = new Date();
+    const qLower = q?.trim().toLowerCase();
+    const memRows = Array.from(memoryStore.values())
+      .filter((item) => {
+        if (item.sessionHash !== sessionHash || item.expiresAt <= now) return false;
+        if (!qLower) return true;
+        return (
+          item.sourceLabel.toLowerCase().includes(qLower) ||
+          (item.companyName && item.companyName.toLowerCase().includes(qLower)) ||
+          (item.jobTitle && item.jobTitle.toLowerCase().includes(qLower))
+        );
+      })
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, limit);
+
+    response.json(ListAnalysesResponse.parse(memRows.map(toSummary)));
   } catch (error) {
     handleFailure(request, response, error);
   }
@@ -225,22 +356,41 @@ router.get("/analyses/:id", async (request, response): Promise<void> => {
 
   try {
     await purgeExpiredAnalyses();
-    const [row] = await db
-      .select()
-      .from(jobShieldAnalysesTable)
-      .where(
-        and(
-          eq(jobShieldAnalysesTable.id, parsed.data.id),
-          eq(jobShieldAnalysesTable.sessionHash, sessionHash),
-          gt(jobShieldAnalysesTable.expiresAt, new Date()),
-        ),
-      )
-      .limit(1);
-    if (!row) {
-      response.status(404).json({ error: "This analysis was not found in this browser session." });
+
+    // First try database
+    try {
+      const [row] = await db
+        .select()
+        .from(jobShieldAnalysesTable)
+        .where(
+          and(
+            eq(jobShieldAnalysesTable.id, parsed.data.id),
+            eq(jobShieldAnalysesTable.sessionHash, sessionHash),
+            gt(jobShieldAnalysesTable.expiresAt, new Date()),
+          ),
+        )
+        .limit(1);
+
+      if (row) {
+        response.json(reportForClient(row.report));
+        return;
+      }
+    } catch {
+      // Continue to check memoryStore
+    }
+
+    // Check memoryStore
+    const memItem = memoryStore.get(parsed.data.id);
+    if (
+      memItem &&
+      memItem.sessionHash === sessionHash &&
+      memItem.expiresAt > new Date()
+    ) {
+      response.json(reportForClient(memItem.report));
       return;
     }
-    response.json(reportForClient(row.report));
+
+    response.status(404).json({ error: "This analysis was not found in this browser session." });
   } catch (error) {
     handleFailure(request, response, error);
   }
@@ -251,9 +401,20 @@ router.delete("/analyses/clear", async (request, response): Promise<void> => {
   if (!sessionHash) return;
 
   try {
-    await db
-      .delete(jobShieldAnalysesTable)
-      .where(eq(jobShieldAnalysesTable.sessionHash, sessionHash));
+    for (const [id, item] of memoryStore.entries()) {
+      if (item.sessionHash === sessionHash) {
+        memoryStore.delete(id);
+      }
+    }
+
+    try {
+      await db
+        .delete(jobShieldAnalysesTable)
+        .where(eq(jobShieldAnalysesTable.sessionHash, sessionHash));
+    } catch {
+      // Best-effort database deletion
+    }
+
     response.status(204).json(ClearAnalysesResponse.parse(undefined));
   } catch (error) {
     handleFailure(request, response, error);
@@ -270,15 +431,28 @@ router.delete("/analyses/:id", async (request, response): Promise<void> => {
   if (!sessionHash) return;
 
   try {
-    const [deleted] = await db
-      .delete(jobShieldAnalysesTable)
-      .where(
-        and(
-          eq(jobShieldAnalysesTable.id, parsed.data.id),
-          eq(jobShieldAnalysesTable.sessionHash, sessionHash),
-        ),
-      )
-      .returning({ id: jobShieldAnalysesTable.id });
+    let deleted = false;
+    const memItem = memoryStore.get(parsed.data.id);
+    if (memItem && memItem.sessionHash === sessionHash) {
+      memoryStore.delete(parsed.data.id);
+      deleted = true;
+    }
+
+    try {
+      const [dbDeleted] = await db
+        .delete(jobShieldAnalysesTable)
+        .where(
+          and(
+            eq(jobShieldAnalysesTable.id, parsed.data.id),
+            eq(jobShieldAnalysesTable.sessionHash, sessionHash),
+          ),
+        )
+        .returning({ id: jobShieldAnalysesTable.id });
+      if (dbDeleted) deleted = true;
+    } catch {
+      // Best-effort database deletion
+    }
+
     if (!deleted) {
       response.status(404).json({ error: "This analysis was not found in this browser session." });
       return;
@@ -295,28 +469,76 @@ router.get("/dashboard", async (request, response): Promise<void> => {
 
   try {
     await purgeExpiredAnalyses();
-    const filter = and(
-      eq(jobShieldAnalysesTable.sessionHash, sessionHash),
-      gt(jobShieldAnalysesTable.expiresAt, new Date()),
-    );
-    const [totalRow] = await db
-      .select({ value: count() })
-      .from(jobShieldAnalysesTable)
-      .where(filter);
-    const [elevatedRow] = await db
-      .select({ value: count() })
-      .from(jobShieldAnalysesTable)
-      .where(and(filter, eq(jobShieldAnalysesTable.riskLevel, "elevated")));
-    const recentRows = await db
-      .select()
-      .from(jobShieldAnalysesTable)
-      .where(filter)
-      .orderBy(desc(jobShieldAnalysesTable.createdAt))
-      .limit(5);
+
+    let total = 0;
+    let elevated = 0;
+    let recentRows: Array<typeof jobShieldAnalysesTable.$inferSelect> = [];
+    let dbSuccess = false;
+
+    try {
+      const filter = and(
+        eq(jobShieldAnalysesTable.sessionHash, sessionHash),
+        gt(jobShieldAnalysesTable.expiresAt, new Date()),
+      );
+      const [totalRow] = await db
+        .select({ value: count() })
+        .from(jobShieldAnalysesTable)
+        .where(filter);
+      const [concernRow] = await db
+        .select({ value: count() })
+        .from(jobShieldAnalysesTable)
+        .where(
+          and(
+            filter,
+            or(
+              eq(jobShieldAnalysesTable.overallAssessment, "evidence_of_concern"),
+              eq(jobShieldAnalysesTable.riskLevel, "elevated"),
+            ),
+          ),
+        );
+      recentRows = await db
+        .select()
+        .from(jobShieldAnalysesTable)
+        .where(filter)
+        .orderBy(desc(jobShieldAnalysesTable.createdAt))
+        .limit(5);
+
+      total = totalRow?.value ?? 0;
+      elevated = concernRow?.value ?? 0;
+      dbSuccess = true;
+    } catch {
+      dbSuccess = false;
+    }
+
+    if (!dbSuccess || (total === 0 && memoryStore.size > 0)) {
+      const now = new Date();
+      const memItems = Array.from(memoryStore.values()).filter(
+        (item) => item.sessionHash === sessionHash && item.expiresAt > now,
+      );
+      total = Math.max(total, memItems.length);
+      elevated = Math.max(
+        elevated,
+        memItems.filter((item) => item.overallAssessment === "evidence_of_concern").length,
+      );
+      const memRecent = memItems
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        .slice(0, 5)
+        .map(toSummary);
+
+      response.json(
+        GetDashboardSummaryResponse.parse({
+          totalAnalyses: total,
+          concernCount: elevated,
+          recentAnalyses: memRecent,
+        }),
+      );
+      return;
+    }
+
     response.json(
       GetDashboardSummaryResponse.parse({
-        totalAnalyses: totalRow?.value ?? 0,
-        elevatedCount: elevatedRow?.value ?? 0,
+        totalAnalyses: total,
+        concernCount: elevated,
         recentAnalyses: recentRows.map(toSummary),
       }),
     );

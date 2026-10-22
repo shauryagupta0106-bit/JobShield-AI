@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { Link, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 import { ErrorBoundary as RoutedErrorBoundary } from '@/components/error-boundary';
+import { ReportView } from '@/components/report-view';
 import NotFound from '@/pages/not-found';
 
 const queryClient = new QueryClient();
@@ -165,17 +166,27 @@ type AnalyzeFormValues = { content: string; sourceLabel: string; companyHint: st
 type UrlFormValues = { url: string; companyHint: string; roleHint: string };
 
 async function extractLocalPdfText(file: File): Promise<string> {
-  if (file.size > 8 * 1024 * 1024) throw new Error('That PDF is larger than 8 MB. Choose a smaller file.');
-  if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) throw new Error('Choose a PDF file to continue.');
+  if (file.size === 0) {
+    throw new Error('The selected PDF file is completely empty (0 bytes). Please select a valid document.');
+  }
+  if (file.size > 8 * 1024 * 1024) {
+    throw new Error('That PDF is larger than 8 MB. Choose a smaller file or copy and paste the relevant text.');
+  }
+  if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+    throw new Error('Invalid file format. Please choose a standard PDF file (.pdf) to continue.');
+  }
+
   const [{ GlobalWorkerOptions, getDocument }, { default: pdfWorkerUrl }] = await Promise.all([
     import('pdfjs-dist'),
     import('pdfjs-dist/build/pdf.worker.min.mjs?url'),
   ]);
   GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+
   const loadingTask = getDocument({
     data: new Uint8Array(await file.arrayBuffer()),
     useWorkerFetch: false,
   });
+
   const timeout = window.setTimeout(() => {
     void loadingTask.destroy();
   }, 30_000);
@@ -183,37 +194,71 @@ async function extractLocalPdfText(file: File): Promise<string> {
   try {
     const pdf = await loadingTask.promise;
     if (pdf.numPages > 100) {
-      throw new Error('This PDF has more than 100 pages. Choose a shorter document or paste the relevant text.');
+      throw new Error('This PDF has more than 100 pages. Choose a shorter document or paste the relevant offer text.');
     }
 
     const pageTexts: string[] = [];
     let characterCount = 0;
+
     for (let pageNumber = 1; pageNumber <= pdf.numPages && characterCount < 50000; pageNumber += 1) {
       const page = await pdf.getPage(pageNumber);
       const content = await page.getTextContent();
-      const pageText = content.items
-        .filter((item): item is typeof item & { str: string } => 'str' in item)
-        .map((item) => item.str)
-        .join(' ');
+
+      let lastY: number | null = null;
+      let pageText = '';
+
+      for (const rawItem of content.items) {
+        if (!('str' in rawItem) || !rawItem.str) continue;
+        const item = rawItem as typeof rawItem & { str: string; hasEOL?: boolean; transform?: number[] };
+        const currentY = Array.isArray(item.transform) ? item.transform[5] : null;
+        const hasEol = Boolean(item.hasEOL);
+
+        if (lastY !== null && currentY !== null && Math.abs(currentY - lastY) > 5) {
+          pageText += '\n';
+        } else if (pageText.length > 0 && !pageText.endsWith(' ') && !pageText.endsWith('\n')) {
+          pageText += ' ';
+        }
+
+        pageText += item.str;
+        if (hasEol) {
+          pageText += '\n';
+        }
+        lastY = currentY;
+      }
+
       pageTexts.push(pageText);
       characterCount += pageText.length;
       page.cleanup();
     }
 
-    const extracted = pageTexts.join(' ').replace(/\s+/g, ' ').trim();
+    const rawExtracted = pageTexts.join('\n\n');
+    // Normalize horizontal whitespace per line while preserving structural linebreaks
+    const extracted = rawExtracted
+      .replace(/[^\S\r\n]+/g, ' ')
+      .replace(/\n\s*\n+/g, '\n\n')
+      .trim();
+
     if (extracted.length < 20) {
-      throw new Error('No readable text was found. This may be a scanned or image-only PDF; paste the offer text instead.');
+      throw new Error('No readable text was found in this PDF. It may be a scanned or image-only document; please copy and paste the offer text instead.');
     }
     return extracted.slice(0, 50000);
   } catch (error) {
-    if (
-      error instanceof Error &&
-      (error.message.startsWith('This PDF has more than') ||
-        error.message.startsWith('No readable text was found.'))
-    ) {
-      throw error;
+    if (error instanceof Error) {
+      if (error.name === 'PasswordException' || /password/i.test(error.message)) {
+        throw new Error('This PDF is password-protected. Please upload an unprotected copy or paste the offer text.');
+      }
+      if (error.name === 'InvalidPDFException' || /invalid|corrupt/i.test(error.message)) {
+        throw new Error('This file appears to be corrupted or is not a valid PDF document. Please check the file and try again.');
+      }
+      if (
+        error.message.startsWith('This PDF has more than') ||
+        error.message.startsWith('No readable text was found') ||
+        error.message.startsWith('The selected PDF')
+      ) {
+        throw error;
+      }
     }
-    throw new Error('We could not read this PDF. Try a text-based PDF or paste the offer text instead.');
+    throw new Error('We could not read this PDF. Try a standard text-based PDF or paste the offer text directly.');
   } finally {
     window.clearTimeout(timeout);
     await loadingTask.destroy().catch(() => undefined);
@@ -231,10 +276,12 @@ function AnalyzePage() {
   const queryClient = useQueryClient();
   const textForm = useForm<AnalyzeFormValues>({ defaultValues: { content: '', sourceLabel: '', companyHint: '', roleHint: '' } });
   const urlForm = useForm<UrlFormValues>({ defaultValues: { url: '', companyHint: '', roleHint: '' } });
+
   const onTextSubmit = textForm.handleSubmit((values) => {
     setNotice(''); setPdfError('');
     if (values.content.trim().length < 20) { setNotice('Add at least 20 characters of offer or listing text.'); return; }
-    analyzeText.mutate({ data: { inputType: fileName ? 'pdf' : 'text', content: values.content.trim(), sourceLabel: values.sourceLabel.trim() || undefined, companyHint: values.companyHint.trim() || undefined, roleHint: values.roleHint.trim() || undefined } }, {
+    const effectiveSourceLabel = fileName ? `PDF: ${fileName}` : values.sourceLabel.trim() || undefined;
+    analyzeText.mutate({ data: { inputType: fileName ? 'pdf' : 'text', content: values.content.trim(), sourceLabel: effectiveSourceLabel, companyHint: values.companyHint.trim() || undefined, roleHint: values.roleHint.trim() || undefined } }, {
       onSuccess: (report) => {
         queryClient.invalidateQueries({ queryKey: getListAnalysesQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
@@ -243,6 +290,7 @@ function AnalyzePage() {
       },
     });
   });
+
   const onUrlSubmit = urlForm.handleSubmit((values) => {
     setNotice('');
     try { const parsed = new URL(values.url); if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error(); }
@@ -256,7 +304,9 @@ function AnalyzePage() {
       },
     });
   });
+
   const busy = analyzeText.isPending || analyzeUrl.isPending;
+
   async function onFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     setPdfError('');
@@ -264,7 +314,7 @@ function AnalyzePage() {
     try {
       const text = await extractLocalPdfText(file);
       textForm.setValue('content', text, { shouldValidate: true });
-      textForm.setValue('sourceLabel', 'Uploaded PDF');
+      textForm.setValue('sourceLabel', `PDF: ${file.name}`);
       setFileName(file.name);
     } catch (error) {
       setFileName('');
@@ -329,12 +379,16 @@ function AnalyzePage() {
   );
 }
 
-function riskPresentation(level: string) {
-  switch (level) {
-    case 'lower': return { label: 'Lower indicator', color: '#16803D', bg: '#EFF8F1' };
-    case 'moderate': return { label: 'Moderate indicator', color: '#B76E00', bg: '#FFF7E8' };
-    case 'elevated': return { label: 'Elevated indicator', color: '#C62828', bg: '#FFF1F0' };
-    default: return { label: 'Insufficient evidence', color: '#667085', bg: '#F7F9FC' };
+function assessmentPresentation(assessment: string) {
+  switch (assessment) {
+    case 'no_major_warnings':
+      return { label: 'No major warnings found', tone: 'green' as const };
+    case 'conflicting_evidence':
+      return { label: 'Mixed / conflicting', tone: 'amber' as const };
+    case 'evidence_of_concern':
+      return { label: 'Evidence of concern', tone: 'red' as const };
+    default:
+      return { label: 'Insufficient evidence', tone: 'neutral' as const };
   }
 }
 function verificationLabel(status: string) {
@@ -349,90 +403,85 @@ function StatusTag({ text, tone = 'neutral' }: { text: string; tone?: 'neutral' 
   const tones = { neutral: 'bg-[#F7F9FC] text-[#344054]', green: 'bg-[#EFF8F1] text-[#16803D]', amber: 'bg-[#FFF7E8] text-[#8A5100]', red: 'bg-[#FFF1F0] text-[#C62828]' };
   return <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${tones[tone]}`} data-testid={`status-tag-${text.toLowerCase().replaceAll(' ', '-')}`}>{text}</span>;
 }
-function riskTone(level: string): 'green' | 'amber' | 'red' | 'neutral' {
-  return level === 'lower' ? 'green' : level === 'elevated' ? 'red' : level === 'moderate' ? 'amber' : 'neutral';
-}
 
 function ReportPage({ id }: { id: string }) {
   const { data: report, isLoading, isError, refetch } = useGetAnalysis(id, { query: { enabled: !!id, queryKey: getGetAnalysisQueryKey(id) } });
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState(false);
-  const risk = report ? riskPresentation(report.riskLevel) : riskPresentation('insufficient_evidence');
+
   async function copySummary() {
     if (!report) return;
     const lines = [
-      report.jobTitle || report.sourceLabel || 'Job offer review',
-      `Company: ${report.companyName || 'not identified'}`,
-      `Risk indicator: ${report.riskScore}/100 (${risk.label})`,
-      'Heuristic indicator only—not a probability or fraud determination.',
+      `JOB VERIFICATION REPORT: ${report.jobTitle || report.sourceLabel || 'Job Offer Analysis'}`,
+      `Company: ${report.companyName || 'Not identified'}`,
+      `Overall Assessment: ${report.overallAssessment.replace(/_/g, ' ').toUpperCase()}`,
+      `Assessment Rationale: ${report.assessmentRationale || report.summary}`,
+      `Verification Status: ${report.verificationStatus.replace(/_/g, ' ')}`,
+      `Reviewed: ${dateLabel(report.createdAt)}`,
       '',
+      '--- ASSESSMENT SUMMARY ---',
       report.summary,
       '',
-      'Findings:',
+      '--- KEY FINDINGS ---',
       ...(report.findings.length
-        ? report.findings.map((finding) => `- ${finding.title}: ${finding.description}`)
-        : ['- No findings were returned. This does not establish that the offer or company is safe.']),
+        ? report.findings.map((f, i) => `${i + 1}. [${f.severity.toUpperCase()}] ${f.title}: ${f.description}\n   Why it matters: ${f.whyItMatters}\n   Action: ${f.recommendedAction}`)
+        : ['No warning patterns were detected in the submitted material. (Verification may be incomplete).']),
       '',
-      'Recommended next steps:',
-      ...report.recommendedNextSteps.map((step) => `- ${step}`),
+      '--- VERIFICATION CHECKS ---',
+      ...report.checks.map((c) => `- ${c.label}: ${c.status} (${c.explanation})`),
+      '',
+      '--- RECOMMENDED NEXT STEPS ---',
+      ...report.recommendedNextSteps.map((step, i) => `${i + 1}. ${step}`),
+      '',
+      '--- QUESTIONS TO ASK THE RECRUITER ---',
+      ...(report.questionsForRecruiter?.map((q, i) => `${i + 1}. ${q}`) || []),
+      '',
+      '--- NOTICE ---',
+      'JobShield AI reports are heuristic indicators based on submitted text and available public data. Absence of detected warning signs is not a guarantee of legitimacy. They do not constitute legal fraud determinations.',
     ];
     try {
       await navigator.clipboard.writeText(lines.join('\n'));
       setCopyError(false);
       setCopied(true);
-      window.setTimeout(() => setCopied(false), 1800);
+      window.setTimeout(() => setCopied(false), 2000);
     } catch {
       setCopyError(true);
       setCopied(false);
     }
   }
-  return <div className="page-enter mx-auto max-w-[1080px] px-5 py-8 sm:px-8 sm:py-12">
-    <Link href="/history" className="mb-7 inline-flex items-center gap-2 text-sm font-semibold text-[#667085] hover:text-[#2563EB]" data-testid="link-back-history"><ArrowLeft size={16} /> Your history</Link>
-    {isLoading && <div className="space-y-4" aria-label="Loading report" data-testid="loading-report"><div className="h-8 w-64 animate-pulse rounded bg-[#F7F9FC]" /><div className="h-36 animate-pulse rounded-2xl bg-[#F7F9FC]" /><div className="h-64 animate-pulse rounded-2xl bg-[#F7F9FC]" /></div>}
-    {isError && <div className="rounded-xl border border-[#E4E9F0] bg-[#F7F9FC] p-8 text-center"><ShieldAlert className="mx-auto text-[#B76E00]" /><h1 className="mt-4 text-xl font-bold">This report could not be loaded</h1><p className="mt-2 text-sm text-[#667085]">It may have been deleted or belong to another browser session.</p><Button onClick={() => refetch()} variant="outline" className="mt-5" data-testid="button-retry-report">Try again</Button></div>}
-    {copyError && <p role="status" className="mb-4 text-xs text-[#C62828]" data-testid="error-copy-summary">Could not copy the report summary. Check clipboard permissions and try again.</p>}
-    {report && <ReportContent report={report} risk={risk} onCopy={copySummary} copied={copied} />}
-  </div>;
-}
 
-function ReportContent({ report, risk, onCopy, copied }: { report: AnalysisReport; risk: ReturnType<typeof riskPresentation>; onCopy: () => void; copied: boolean }) {
-  const [, navigate] = useLocation();
-  const date = dateLabel(report.createdAt);
-  const tone = riskTone(report.riskLevel);
-  const statusTone = report.verificationStatus === 'official_match' ? 'green' : report.verificationStatus === 'material_discrepancy' ? 'red' : report.verificationStatus === 'partial_match' ? 'amber' : 'neutral';
-  return <div data-testid="report-detail">
-    <div className="flex flex-col gap-5 border-b border-[#E4E9F0] pb-7 sm:flex-row sm:items-start sm:justify-between">
-      <div><Eyebrow><FileCheck2 size={14} /> Saved analysis · {report.sourceType.toUpperCase()}</Eyebrow><h1 className="font-display max-w-[760px] text-3xl font-extrabold tracking-[-.05em] sm:text-4xl" data-testid="text-report-title">{report.jobTitle || report.sourceLabel || 'Offer review'}</h1><p className="mt-2 text-sm text-[#667085]">{report.companyName || 'Company not identified'} <span className="px-1.5">·</span> Reviewed {date}</p></div>
-      <div className="flex shrink-0 gap-2"><Button variant="outline" onClick={onCopy} className="gap-2 border-[#D5DDE7]" data-testid="button-copy-report">{copied ? <Check size={15} /> : <Clipboard size={15} />}{copied ? 'Copied' : 'Copy summary'}</Button><Button onClick={() => window.print()} variant="outline" className="gap-2 border-[#D5DDE7]" data-testid="button-print-report"><FileText size={15} />Print</Button></div>
+  return (
+    <div className="page-enter mx-auto max-w-[1120px] px-4 py-8 sm:px-6 sm:py-10">
+      {isLoading && (
+        <div className="space-y-4" aria-label="Loading report" data-testid="loading-report">
+          <div className="h-8 w-64 animate-pulse rounded bg-[#F7F9FC]" />
+          <div className="h-44 animate-pulse rounded-2xl bg-[#F7F9FC]" />
+          <div className="h-64 animate-pulse rounded-2xl bg-[#F7F9FC]" />
+        </div>
+      )}
+      {isError && (
+        <div className="rounded-xl border border-[#E4E9F0] bg-[#F7F9FC] p-8 text-center" data-testid="error-report">
+          <ShieldAlert className="mx-auto text-[#B76E00]" size={36} />
+          <h1 className="mt-4 font-display text-xl font-bold text-[#172B4D]">This report could not be loaded</h1>
+          <p className="mt-2 text-sm text-[#667085]">It may have expired, been cleared, or belong to another browser session.</p>
+          <Button onClick={() => refetch()} variant="outline" className="mt-5" data-testid="button-retry-report">Try again</Button>
+        </div>
+      )}
+      {copyError && (
+        <p role="status" className="mb-4 text-xs font-semibold text-[#C62828]" data-testid="error-copy-summary">
+          Could not copy the report summary to clipboard. Please check browser permissions.
+        </p>
+      )}
+      {report && <ReportView report={report} onCopy={copySummary} copied={copied} />}
     </div>
-    <section className="mt-7 grid gap-0 overflow-hidden rounded-2xl border border-[#E4E9F0] bg-white md:grid-cols-[230px_1fr]">
-      <div className="border-b border-[#E4E9F0] p-6 md:border-b-0 md:border-r"><div className="text-[11px] font-bold uppercase tracking-[.12em] text-[#667085]">Risk score</div><div className="mt-3 flex items-baseline gap-2"><span className="font-display text-6xl font-extrabold tracking-[-.07em]" style={{ color: risk.color }} data-testid="text-risk-score">{report.riskScore}</span><span className="text-sm text-[#98A2B3]">/ 100</span></div><div className="mt-2"><StatusTag text={risk.label} tone={tone} /></div><p className="mt-4 text-xs leading-5 text-[#667085]">Heuristic indicator only. It is not a probability, fraud determination, or assessment of the company as a whole.</p></div>
-      <div className="p-6 sm:p-7"><div className="flex flex-wrap items-center gap-2"><span className="text-xs font-bold uppercase tracking-[.12em] text-[#667085]">Verification</span><StatusTag text={verificationLabel(report.verificationStatus)} tone={statusTone} /></div><p className="mt-4 text-[15px] leading-7 text-[#344054]" data-testid="text-report-summary">{report.summary}</p><div className="mt-5 flex flex-wrap gap-2 text-xs text-[#667085]">{report.companyDomain && <span className="rounded-md bg-[#F7F9FC] px-2.5 py-1.5">Possible careers-domain lead (not verified): <b className="text-[#344054]">{report.companyDomain}</b></span>}{report.applicationDomain && <span className="rounded-md bg-[#F7F9FC] px-2.5 py-1.5">Application domain: <b className="text-[#344054]">{report.applicationDomain}</b></span>}</div></div>
-    </section>
-    <div className="mt-7 grid gap-7 lg:grid-cols-[1fr_320px]">
-      <div className="space-y-7">
-        <section><div className="mb-4 flex items-baseline justify-between gap-3"><h2 className="font-display text-xl font-extrabold tracking-[-.03em]">Findings</h2><span className="text-xs text-[#667085]" data-testid="text-finding-count">{report.findings.length} observed</span></div>
-          {report.findings.length ? <div className="space-y-3">{report.findings.map((finding, index) => <article key={`${finding.code}-${index}`} className="rounded-xl border border-[#E4E9F0] bg-white p-5" data-testid={`finding-${index}`}><div className="flex flex-wrap items-center gap-2"><StatusTag text={finding.severity === 'elevated' ? 'Elevated' : finding.severity === 'caution' ? 'Caution' : 'Information'} tone={finding.severity === 'elevated' ? 'red' : finding.severity === 'caution' ? 'amber' : 'neutral'} /><h3 className="text-sm font-bold">{finding.title}</h3></div><p className="mt-3 text-sm leading-6 text-[#344054]">{finding.description}</p><p className="mt-2 text-xs leading-5 text-[#667085]"><b className="text-[#344054]">Why it matters:</b> {finding.whyItMatters}</p><p className="mt-2 text-xs leading-5 text-[#667085]"><b className="text-[#344054]">Recommended action:</b> {finding.recommendedAction}</p>{finding.evidenceUrl && <a href={finding.evidenceUrl} rel="noreferrer" target="_blank" className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-[#2563EB]" data-testid={`link-finding-evidence-${index}`}>View source <ArrowUpRight size={13} /></a>}</article>)}</div> : <div className="rounded-xl border border-dashed border-[#D5DDE7] p-6 text-sm text-[#667085]" data-testid="empty-findings">No findings were returned. This does not establish that the offer or company is safe.</div>}
-        </section>
-        <section><h2 className="mb-4 font-display text-xl font-extrabold tracking-[-.03em]">Verification checks</h2>{report.checks.length ? <div className="overflow-hidden rounded-xl border border-[#E4E9F0]">{report.checks.map((check, i) => <div key={`${check.label}-${i}`} className="grid gap-2 border-b border-[#E4E9F0] bg-white p-4 last:border-b-0 sm:grid-cols-[150px_125px_1fr] sm:items-start" data-testid={`check-${i}`}><div className="text-sm font-bold">{check.label}</div><StatusTag text={check.status.replaceAll('_', ' ')} tone={check.status === 'match' ? 'green' : check.status === 'discrepancy' ? 'red' : check.status === 'partial' ? 'amber' : 'neutral'} /><div className="text-xs leading-5 text-[#667085]">{check.explanation}{check.submittedValue && <div className="mt-1"><b>Submitted:</b> {check.submittedValue}</div>}{check.observedValue && <div><b>Observed:</b> {check.observedValue}</div>}</div></div>)}</div> : <p className="rounded-xl border border-dashed border-[#D5DDE7] p-5 text-sm text-[#667085]">No verification checks were returned for this analysis.</p>}</section>
-        <section><h2 className="mb-4 font-display text-xl font-extrabold tracking-[-.03em]">Evidence and sources</h2>{report.evidence.length ? <div className="space-y-3">{report.evidence.map((item, i) => <article key={`${item.url}-${i}`} className="rounded-xl border border-[#E4E9F0] p-4" data-testid={`evidence-${i}`}><div className="flex flex-wrap items-center gap-2"><StatusTag text={item.relationship} tone={item.relationship === 'supports' ? 'green' : item.relationship === 'contradicts' ? 'red' : 'neutral'} /><span className="text-[11px] text-[#667085]">{item.sourceType.replaceAll('_', ' ')} · {item.domain}</span></div><a href={item.url} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-sm font-bold text-[#2563EB] hover:underline" data-testid={`link-evidence-${i}`}>{item.title || item.url}<ArrowUpRight size={14} /></a>{item.excerpt && <p className="mt-2 text-sm leading-6 text-[#344054]">{item.excerpt}</p>}<p className="mt-2 text-[11px] text-[#98A2B3]">{item.retrievedAt ? `Retrieved ${dateLabel(item.retrievedAt)}` : 'Retrieval time not provided'}</p></article>)}</div> : <div className="rounded-xl border border-dashed border-[#D5DDE7] p-6 text-sm text-[#667085]" data-testid="empty-evidence">No external evidence sources were returned. Absence of sources is not evidence of wrongdoing.</div>}</section>
-      </div>
-      <aside className="space-y-5">
-        <section className="rounded-xl border border-[#E4E9F0] p-5"><h2 className="font-display text-base font-extrabold">What to do next</h2>{report.recommendedNextSteps.length ? <ol className="mt-4 space-y-3">{report.recommendedNextSteps.map((step, i) => <li className="flex gap-3 text-sm leading-6 text-[#344054]" key={i} data-testid={`next-step-${i}`}><span className="grid size-6 shrink-0 place-items-center rounded-full bg-[#E8F5F3] text-[11px] font-bold text-[#0F766E]">{i + 1}</span>{step}</li>)}</ol> : <p className="mt-3 text-sm text-[#667085]">No next steps were returned. Consider checking the company through official channels.</p>}</section>
-        <section className="rounded-xl border border-[#F0DDB9] bg-[#FFFBF3] p-5"><div className="flex gap-2 text-sm font-bold text-[#8A5100]"><Info size={17} /> Limitations</div>{report.limitations.length ? <ul className="mt-3 list-disc space-y-2 pl-5 text-xs leading-5 text-[#72551E]">{report.limitations.map((item, i) => <li key={i} data-testid={`limitation-${i}`}>{item}</li>)}</ul> : <p className="mt-3 text-xs leading-5 text-[#72551E]">No limitations were provided in the report. Research coverage can still be incomplete.</p>}</section>
-        <section className="rounded-xl border border-[#E4E9F0] p-5"><h2 className="text-sm font-bold">Analysis status</h2><dl className="mt-3 space-y-2 text-xs"><div className="flex justify-between gap-2"><dt className="text-[#667085]">Public research</dt><dd className="font-semibold">{report.researchStatus.replaceAll('_', ' ')}</dd></div><div className="flex justify-between gap-2"><dt className="text-[#667085]">AI summary</dt><dd className="font-semibold">{report.aiStatus.replaceAll('_', ' ')}</dd></div><div className="flex justify-between gap-2"><dt className="text-[#667085]">Methodology</dt><dd className="font-mono">{report.methodologyVersion}</dd></div></dl></section>
-        <Link href="/safety" className="flex items-center justify-between rounded-xl bg-[#F7F9FC] p-4 text-sm font-bold hover:bg-[#EEF3F8]" data-testid="link-report-safety">Review safety guidance <ArrowRight size={16} /></Link>
-      </aside>
-    </div>
-    <div className="mt-9 flex flex-col justify-between gap-4 border-t border-[#E4E9F0] pt-6 sm:flex-row sm:items-center"><p className="max-w-[650px] text-xs leading-5 text-[#667085]">This review does not determine whether an organization is legitimate. Confirm important details independently, especially before sharing information or accepting an offer.</p><Button onClick={() => navigate('/analyze')} className="gap-2 bg-[#2563EB] font-bold text-white hover:bg-[#1D4ED8]" data-testid="button-analyze-another">Review another offer <ArrowRight size={15} /></Button></div>
-  </div>;
+  );
 }
 
 function SummaryRow({ item, onDelete }: { item: AnalysisSummary; onDelete?: (id: string) => void }) {
-  const risk = riskPresentation(item.riskLevel);
-  return <div className="grid gap-4 border-b border-[#E4E9F0] p-4 last:border-b-0 sm:grid-cols-[1fr_140px_150px_auto] sm:items-center sm:px-5" data-testid={`analysis-row-${item.id}`}>
+  const assessment = assessmentPresentation(item.overallAssessment);
+  return <div className="grid gap-4 border-b border-[#E4E9F0] p-4 last:border-b-0 sm:grid-cols-[1fr_150px_150px_auto] sm:items-center sm:px-5" data-testid={`analysis-row-${item.id}`}>
     <Link href={`/report/${encodeURIComponent(item.id)}`} className="group min-w-0" data-testid={`link-analysis-${item.id}`}><div className="truncate text-sm font-bold text-[#172B4D] group-hover:text-[#2563EB]">{item.jobTitle || item.sourceLabel || 'Offer review'}</div><div className="mt-1 truncate text-xs text-[#667085]">{item.companyName || 'Company not identified'} · {item.sourceType.toUpperCase()} · {dateLabel(item.createdAt)}</div></Link>
-    <StatusTag text={risk.label} tone={riskTone(item.riskLevel)} />
+    <StatusTag text={assessment.label} tone={assessment.tone} />
     <div className="text-xs text-[#667085]">{verificationLabel(item.verificationStatus)}<div className="mt-1">{item.findingCount} {item.findingCount === 1 ? 'finding' : 'findings'}</div></div>
     {onDelete && <button type="button" aria-label={`Delete report ${item.jobTitle || item.id}`} onClick={() => onDelete(item.id)} className="inline-flex h-9 items-center justify-center gap-2 rounded-lg px-3 text-xs font-bold text-[#667085] hover:bg-[#FFF1F0] hover:text-[#C62828]" data-testid={`button-delete-${item.id}`}><Trash2 size={15} />Delete</button>}
   </div>;
@@ -458,7 +507,7 @@ function HistoryPage() {
     <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><Eyebrow><LockKeyhole size={14} /> Private browser session</Eyebrow><h1 className="font-display text-4xl font-extrabold tracking-[-.055em]" data-testid="text-history-title">Your history</h1><p className="mt-3 max-w-[600px] text-sm leading-6 text-[#667085]">Saved reports are associated with this anonymous browser session. Clearing browser data may remove access.</p></div><Link href="/analyze" className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#2563EB] px-4 text-sm font-bold text-white hover:bg-[#1D4ED8] focus-ring" data-testid="button-history-analyze">Analyze an offer <ArrowRight size={16} /></Link></div>
     <div className="mt-8 grid gap-3 sm:grid-cols-2">
       <div className="rounded-xl border border-[#E4E9F0] bg-[#F7F9FC] p-5"><div className="text-xs font-semibold text-[#667085]">Reports in this session</div>{dashboard.isLoading ? <div className="mt-2 h-8 w-16 animate-pulse rounded bg-white" /> : dashboard.isError ? <div className="mt-2 text-sm text-[#667085]">Summary unavailable</div> : <div className="mt-1 font-display text-3xl font-extrabold" data-testid="text-total-analyses">{total ?? 0}</div>}</div>
-      <div className="rounded-xl border border-[#E4E9F0] bg-white p-5"><div className="text-xs font-semibold text-[#667085]">Elevated indicators</div>{dashboard.isLoading ? <div className="mt-2 h-8 w-16 animate-pulse rounded bg-[#F7F9FC]" /> : dashboard.isError ? <div className="mt-2 text-sm text-[#667085]">Summary unavailable</div> : <div className="mt-1 font-display text-3xl font-extrabold text-[#B76E00]" data-testid="text-elevated-count">{dashboard.data?.elevatedCount ?? 0}</div>}<p className="mt-1 text-xs text-[#667085]">A signal to inspect, not a fraud verdict.</p></div>
+      <div className="rounded-xl border border-[#E4E9F0] bg-white p-5"><div className="text-xs font-semibold text-[#667085]">Opportunities of concern</div>{dashboard.isLoading ? <div className="mt-2 h-8 w-16 animate-pulse rounded bg-[#F7F9FC]" /> : dashboard.isError ? <div className="mt-2 text-sm text-[#667085]">Summary unavailable</div> : <div className="mt-1 font-display text-3xl font-extrabold text-[#C62828]" data-testid="text-concern-count">{dashboard.data?.concernCount ?? 0}</div>}<p className="mt-1 text-xs text-[#667085]">Elevated scam signals requiring careful independent verification.</p></div>
     </div>
     <div className="mt-8 overflow-hidden rounded-xl border border-[#E4E9F0]">
       <div className="flex flex-col justify-between gap-3 border-b border-[#E4E9F0] bg-[#F7F9FC] px-5 py-4 sm:flex-row sm:items-center"><div><h2 className="text-sm font-bold">Saved analyses</h2><p className="mt-1 text-xs text-[#667085]">Only visible in your current anonymous session.</p></div>{list.data?.length ? <Button variant="outline" size="sm" disabled={clear.isPending} onClick={clearAll} className="gap-2 border-[#D5DDE7] text-[#667085] hover:text-[#C62828]" data-testid="button-clear-history"><Trash2 size={14} />{clear.isPending ? 'Clearing…' : 'Clear history'}</Button> : null}</div>

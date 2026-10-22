@@ -5,7 +5,7 @@
  * JobShield AI analysis, research, and private-session history API
  * OpenAPI spec version: 0.1.0
  */
-import type { AnalysisSummaryRiskLevel } from './analysisSummaryRiskLevel';
+import type { AnalysisSummaryOverallAssessment } from './analysisSummaryOverallAssessment';
 import type { AnalysisSummarySourceType } from './analysisSummarySourceType';
 import type { AnalysisSummaryVerificationStatus } from './analysisSummaryVerificationStatus';
 
@@ -18,12 +18,8 @@ export interface AnalysisSummary {
   companyName: string | null;
   /** @nullable */
   jobTitle: string | null;
-  /**
-     * @minimum 0
-     * @maximum 100
-     */
-  riskScore: number;
-  riskLevel: AnalysisSummaryRiskLevel;
+  overallAssessment: AnalysisSummaryOverallAssessment;
+  assessmentRationale: string;
   verificationStatus: AnalysisSummaryVerificationStatus;
   findingCount: number;
 }

@@ -121,7 +121,7 @@ function parseSearchResults(payload: unknown): PublicSearchResult[] {
         stringField(item, ["title"], 240) || safeUrl.hostname,
       url: normalized,
       domain:
-        stringField(item, ["domain"], 253) ||
+        stringField(item, ["domain", "site_name"], 253) ||
         safeUrl.hostname.replace(/^www\./, ""),
       snippet: stringField(item, ["snippet", "description"], 1200),
       publishedAt: publishedValue || null,
@@ -143,7 +143,7 @@ export async function searchPublicSources(query: string): Promise<SearchOutcome>
   const url = new URL(SEARCH_ENDPOINT);
   url.searchParams.set("query", query.slice(0, 500));
   url.searchParams.set(
-    "intent",
+    "purpose",
     "Find public company and job-career sources to compare with a submitted job opportunity.",
   );
   url.searchParams.set("language", "en");
@@ -270,7 +270,7 @@ export async function fetchPublicPages(
         links: false,
         image_links: false,
         per_url_timeout_ms: REQUEST_TIMEOUT_MS,
-        intent: intent.slice(0, 500),
+        purpose: intent.slice(0, 500),
       }),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS * 2),
     });

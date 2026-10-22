@@ -54,13 +54,13 @@ export const AnalysisReportSourceType = {
   pdf: 'pdf',
 } as const;
 
-export type AnalysisReportRiskLevel = typeof AnalysisReportRiskLevel[keyof typeof AnalysisReportRiskLevel];
+export type AnalysisReportOverallAssessment = typeof AnalysisReportOverallAssessment[keyof typeof AnalysisReportOverallAssessment];
 
 
-export const AnalysisReportRiskLevel = {
-  lower: 'lower',
-  moderate: 'moderate',
-  elevated: 'elevated',
+export const AnalysisReportOverallAssessment = {
+  evidence_of_concern: 'evidence_of_concern',
+  conflicting_evidence: 'conflicting_evidence',
+  no_major_warnings: 'no_major_warnings',
   insufficient_evidence: 'insufficient_evidence',
 } as const;
 
@@ -112,6 +112,8 @@ export interface AnalysisFinding {
   recommendedAction: string;
   /** @nullable */
   evidenceUrl: string | null;
+  /** @nullable */
+  evidenceExcerpt?: string | null;
 }
 
 export type EvidenceSourceSourceType = typeof EvidenceSourceSourceType[keyof typeof EvidenceSourceSourceType];
@@ -144,6 +146,16 @@ export interface EvidenceSource {
   relationship: EvidenceSourceRelationship;
 }
 
+export type VerificationCheckCategory = typeof VerificationCheckCategory[keyof typeof VerificationCheckCategory];
+
+
+export const VerificationCheckCategory = {
+  company_identity: 'company_identity',
+  job_vacancy: 'job_vacancy',
+  recruiter_contact: 'recruiter_contact',
+  offer_terms: 'offer_terms',
+} as const;
+
 export type VerificationCheckStatus = typeof VerificationCheckStatus[keyof typeof VerificationCheckStatus];
 
 
@@ -152,9 +164,11 @@ export const VerificationCheckStatus = {
   partial: 'partial',
   discrepancy: 'discrepancy',
   unable_to_verify: 'unable_to_verify',
+  not_checked: 'not_checked',
 } as const;
 
 export interface VerificationCheck {
+  category: VerificationCheckCategory;
   label: string;
   status: VerificationCheckStatus;
   /** @nullable */
@@ -162,6 +176,21 @@ export interface VerificationCheck {
   /** @nullable */
   observedValue: string | null;
   explanation: string;
+  /** @nullable */
+  sourceUrl?: string | null;
+}
+
+export interface OfferDetails {
+  /** @nullable */
+  compensation: string | null;
+  /** @nullable */
+  employmentType: string | null;
+  /** @nullable */
+  location: string | null;
+  /** @nullable */
+  contactEmail: string | null;
+  /** @nullable */
+  deadline: string | null;
 }
 
 export interface AnalysisReport {
@@ -177,17 +206,15 @@ export interface AnalysisReport {
   companyDomain: string | null;
   /** @nullable */
   applicationDomain: string | null;
-  /**
-     * @minimum 0
-     * @maximum 100
-     */
-  riskScore: number;
-  riskLevel: AnalysisReportRiskLevel;
+  overallAssessment: AnalysisReportOverallAssessment;
+  assessmentRationale: string;
   verificationStatus: AnalysisReportVerificationStatus;
   summary: string;
   findings: AnalysisFinding[];
   evidence: EvidenceSource[];
   checks: VerificationCheck[];
+  offerDetails: OfferDetails;
+  questionsForRecruiter: string[];
   recommendedNextSteps: string[];
   limitations: string[];
   researchStatus: AnalysisReportResearchStatus;
@@ -204,13 +231,13 @@ export const AnalysisSummarySourceType = {
   pdf: 'pdf',
 } as const;
 
-export type AnalysisSummaryRiskLevel = typeof AnalysisSummaryRiskLevel[keyof typeof AnalysisSummaryRiskLevel];
+export type AnalysisSummaryOverallAssessment = typeof AnalysisSummaryOverallAssessment[keyof typeof AnalysisSummaryOverallAssessment];
 
 
-export const AnalysisSummaryRiskLevel = {
-  lower: 'lower',
-  moderate: 'moderate',
-  elevated: 'elevated',
+export const AnalysisSummaryOverallAssessment = {
+  evidence_of_concern: 'evidence_of_concern',
+  conflicting_evidence: 'conflicting_evidence',
+  no_major_warnings: 'no_major_warnings',
   insufficient_evidence: 'insufficient_evidence',
 } as const;
 
@@ -234,19 +261,15 @@ export interface AnalysisSummary {
   companyName: string | null;
   /** @nullable */
   jobTitle: string | null;
-  /**
-     * @minimum 0
-     * @maximum 100
-     */
-  riskScore: number;
-  riskLevel: AnalysisSummaryRiskLevel;
+  overallAssessment: AnalysisSummaryOverallAssessment;
+  assessmentRationale: string;
   verificationStatus: AnalysisSummaryVerificationStatus;
   findingCount: number;
 }
 
 export interface DashboardSummary {
   totalAnalyses: number;
-  elevatedCount: number;
+  concernCount: number;
   recentAnalyses: AnalysisSummary[];
 }
 

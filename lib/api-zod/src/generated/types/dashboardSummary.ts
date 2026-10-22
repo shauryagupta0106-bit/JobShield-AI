@@ -9,6 +9,6 @@ import type { AnalysisSummary } from './analysisSummary';
 
 export interface DashboardSummary {
   totalAnalyses: number;
-  elevatedCount: number;
+  concernCount: number;
   recentAnalyses: AnalysisSummary[];
 }

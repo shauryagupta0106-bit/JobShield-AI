@@ -39,11 +39,6 @@ export const AnalyzeSubmissionBody = zod.object({
   "roleHint": zod.string().max(analyzeSubmissionBodyRoleHintMax).optional()
 })
 
-export const analyzeSubmissionResponseRiskScoreMin = 0;
-export const analyzeSubmissionResponseRiskScoreMax = 100;
-
-
-
 export const AnalyzeSubmissionResponse = zod.object({
   "id": zod.string().uuid(),
   "createdAt": zod.coerce.date(),
@@ -53,8 +48,8 @@ export const AnalyzeSubmissionResponse = zod.object({
   "jobTitle": zod.string().nullable(),
   "companyDomain": zod.string().nullable(),
   "applicationDomain": zod.string().nullable(),
-  "riskScore": zod.number().int().min(analyzeSubmissionResponseRiskScoreMin).max(analyzeSubmissionResponseRiskScoreMax),
-  "riskLevel": zod.enum(['lower', 'moderate', 'elevated', 'insufficient_evidence']),
+  "overallAssessment": zod.enum(['evidence_of_concern', 'conflicting_evidence', 'no_major_warnings', 'insufficient_evidence']),
+  "assessmentRationale": zod.string(),
   "verificationStatus": zod.enum(['official_match', 'partial_match', 'no_match', 'unable_to_verify', 'material_discrepancy']),
   "summary": zod.string(),
   "findings": zod.array(zod.object({
@@ -64,7 +59,8 @@ export const AnalyzeSubmissionResponse = zod.object({
   "description": zod.string(),
   "whyItMatters": zod.string(),
   "recommendedAction": zod.string(),
-  "evidenceUrl": zod.string().nullable()
+  "evidenceUrl": zod.string().nullable(),
+  "evidenceExcerpt": zod.string().nullish()
 })),
   "evidence": zod.array(zod.object({
   "url": zod.string().url(),
@@ -76,12 +72,22 @@ export const AnalyzeSubmissionResponse = zod.object({
   "relationship": zod.enum(['supports', 'contradicts', 'context', 'unknown'])
 })),
   "checks": zod.array(zod.object({
+  "category": zod.enum(['company_identity', 'job_vacancy', 'recruiter_contact', 'offer_terms']),
   "label": zod.string(),
-  "status": zod.enum(['match', 'partial', 'discrepancy', 'unable_to_verify']),
+  "status": zod.enum(['match', 'partial', 'discrepancy', 'unable_to_verify', 'not_checked']),
   "submittedValue": zod.string().nullable(),
   "observedValue": zod.string().nullable(),
-  "explanation": zod.string()
+  "explanation": zod.string(),
+  "sourceUrl": zod.string().nullish()
 })),
+  "offerDetails": zod.object({
+  "compensation": zod.string().nullable(),
+  "employmentType": zod.string().nullable(),
+  "location": zod.string().nullable(),
+  "contactEmail": zod.string().nullable(),
+  "deadline": zod.string().nullable()
+}),
+  "questionsForRecruiter": zod.array(zod.string()),
   "recommendedNextSteps": zod.array(zod.string()),
   "limitations": zod.array(zod.string()),
   "researchStatus": zod.enum(['completed', 'partial', 'unavailable', 'not_configured']),
@@ -107,11 +113,6 @@ export const AnalyzeUrlBody = zod.object({
   "roleHint": zod.string().max(analyzeUrlBodyRoleHintMax).optional()
 })
 
-export const analyzeUrlResponseRiskScoreMin = 0;
-export const analyzeUrlResponseRiskScoreMax = 100;
-
-
-
 export const AnalyzeUrlResponse = zod.object({
   "id": zod.string().uuid(),
   "createdAt": zod.coerce.date(),
@@ -121,8 +122,8 @@ export const AnalyzeUrlResponse = zod.object({
   "jobTitle": zod.string().nullable(),
   "companyDomain": zod.string().nullable(),
   "applicationDomain": zod.string().nullable(),
-  "riskScore": zod.number().int().min(analyzeUrlResponseRiskScoreMin).max(analyzeUrlResponseRiskScoreMax),
-  "riskLevel": zod.enum(['lower', 'moderate', 'elevated', 'insufficient_evidence']),
+  "overallAssessment": zod.enum(['evidence_of_concern', 'conflicting_evidence', 'no_major_warnings', 'insufficient_evidence']),
+  "assessmentRationale": zod.string(),
   "verificationStatus": zod.enum(['official_match', 'partial_match', 'no_match', 'unable_to_verify', 'material_discrepancy']),
   "summary": zod.string(),
   "findings": zod.array(zod.object({
@@ -132,7 +133,8 @@ export const AnalyzeUrlResponse = zod.object({
   "description": zod.string(),
   "whyItMatters": zod.string(),
   "recommendedAction": zod.string(),
-  "evidenceUrl": zod.string().nullable()
+  "evidenceUrl": zod.string().nullable(),
+  "evidenceExcerpt": zod.string().nullish()
 })),
   "evidence": zod.array(zod.object({
   "url": zod.string().url(),
@@ -144,12 +146,22 @@ export const AnalyzeUrlResponse = zod.object({
   "relationship": zod.enum(['supports', 'contradicts', 'context', 'unknown'])
 })),
   "checks": zod.array(zod.object({
+  "category": zod.enum(['company_identity', 'job_vacancy', 'recruiter_contact', 'offer_terms']),
   "label": zod.string(),
-  "status": zod.enum(['match', 'partial', 'discrepancy', 'unable_to_verify']),
+  "status": zod.enum(['match', 'partial', 'discrepancy', 'unable_to_verify', 'not_checked']),
   "submittedValue": zod.string().nullable(),
   "observedValue": zod.string().nullable(),
-  "explanation": zod.string()
+  "explanation": zod.string(),
+  "sourceUrl": zod.string().nullish()
 })),
+  "offerDetails": zod.object({
+  "compensation": zod.string().nullable(),
+  "employmentType": zod.string().nullable(),
+  "location": zod.string().nullable(),
+  "contactEmail": zod.string().nullable(),
+  "deadline": zod.string().nullable()
+}),
+  "questionsForRecruiter": zod.array(zod.string()),
   "recommendedNextSteps": zod.array(zod.string()),
   "limitations": zod.array(zod.string()),
   "researchStatus": zod.enum(['completed', 'partial', 'unavailable', 'not_configured']),
@@ -173,11 +185,6 @@ export const ListAnalysesQueryParams = zod.object({
   "limit": zod.coerce.number().int().min(1).max(listAnalysesQueryLimitMax).default(listAnalysesQueryLimitDefault)
 })
 
-export const listAnalysesResponseRiskScoreMin = 0;
-export const listAnalysesResponseRiskScoreMax = 100;
-
-
-
 export const ListAnalysesResponseItem = zod.object({
   "id": zod.string().uuid(),
   "createdAt": zod.coerce.date(),
@@ -185,8 +192,8 @@ export const ListAnalysesResponseItem = zod.object({
   "sourceLabel": zod.string(),
   "companyName": zod.string().nullable(),
   "jobTitle": zod.string().nullable(),
-  "riskScore": zod.number().int().min(listAnalysesResponseRiskScoreMin).max(listAnalysesResponseRiskScoreMax),
-  "riskLevel": zod.enum(['lower', 'moderate', 'elevated', 'insufficient_evidence']),
+  "overallAssessment": zod.enum(['evidence_of_concern', 'conflicting_evidence', 'no_major_warnings', 'insufficient_evidence']),
+  "assessmentRationale": zod.string(),
   "verificationStatus": zod.enum(['official_match', 'partial_match', 'no_match', 'unable_to_verify', 'material_discrepancy']),
   "findingCount": zod.number().int()
 })
@@ -200,11 +207,6 @@ export const GetAnalysisParams = zod.object({
   "id": zod.coerce.string().uuid()
 })
 
-export const getAnalysisResponseRiskScoreMin = 0;
-export const getAnalysisResponseRiskScoreMax = 100;
-
-
-
 export const GetAnalysisResponse = zod.object({
   "id": zod.string().uuid(),
   "createdAt": zod.coerce.date(),
@@ -214,8 +216,8 @@ export const GetAnalysisResponse = zod.object({
   "jobTitle": zod.string().nullable(),
   "companyDomain": zod.string().nullable(),
   "applicationDomain": zod.string().nullable(),
-  "riskScore": zod.number().int().min(getAnalysisResponseRiskScoreMin).max(getAnalysisResponseRiskScoreMax),
-  "riskLevel": zod.enum(['lower', 'moderate', 'elevated', 'insufficient_evidence']),
+  "overallAssessment": zod.enum(['evidence_of_concern', 'conflicting_evidence', 'no_major_warnings', 'insufficient_evidence']),
+  "assessmentRationale": zod.string(),
   "verificationStatus": zod.enum(['official_match', 'partial_match', 'no_match', 'unable_to_verify', 'material_discrepancy']),
   "summary": zod.string(),
   "findings": zod.array(zod.object({
@@ -225,7 +227,8 @@ export const GetAnalysisResponse = zod.object({
   "description": zod.string(),
   "whyItMatters": zod.string(),
   "recommendedAction": zod.string(),
-  "evidenceUrl": zod.string().nullable()
+  "evidenceUrl": zod.string().nullable(),
+  "evidenceExcerpt": zod.string().nullish()
 })),
   "evidence": zod.array(zod.object({
   "url": zod.string().url(),
@@ -237,12 +240,22 @@ export const GetAnalysisResponse = zod.object({
   "relationship": zod.enum(['supports', 'contradicts', 'context', 'unknown'])
 })),
   "checks": zod.array(zod.object({
+  "category": zod.enum(['company_identity', 'job_vacancy', 'recruiter_contact', 'offer_terms']),
   "label": zod.string(),
-  "status": zod.enum(['match', 'partial', 'discrepancy', 'unable_to_verify']),
+  "status": zod.enum(['match', 'partial', 'discrepancy', 'unable_to_verify', 'not_checked']),
   "submittedValue": zod.string().nullable(),
   "observedValue": zod.string().nullable(),
-  "explanation": zod.string()
+  "explanation": zod.string(),
+  "sourceUrl": zod.string().nullish()
 })),
+  "offerDetails": zod.object({
+  "compensation": zod.string().nullable(),
+  "employmentType": zod.string().nullable(),
+  "location": zod.string().nullable(),
+  "contactEmail": zod.string().nullable(),
+  "deadline": zod.string().nullable()
+}),
+  "questionsForRecruiter": zod.array(zod.string()),
   "recommendedNextSteps": zod.array(zod.string()),
   "limitations": zod.array(zod.string()),
   "researchStatus": zod.enum(['completed', 'partial', 'unavailable', 'not_configured']),
@@ -270,14 +283,9 @@ export const ClearAnalysesResponse = zod.void()
 /**
  * @summary Get a summary of analyses in the current private session
  */
-export const getDashboardSummaryResponseRecentAnalysesItemRiskScoreMin = 0;
-export const getDashboardSummaryResponseRecentAnalysesItemRiskScoreMax = 100;
-
-
-
 export const GetDashboardSummaryResponse = zod.object({
   "totalAnalyses": zod.number().int(),
-  "elevatedCount": zod.number().int(),
+  "concernCount": zod.number().int(),
   "recentAnalyses": zod.array(zod.object({
   "id": zod.string().uuid(),
   "createdAt": zod.coerce.date(),
@@ -285,8 +293,8 @@ export const GetDashboardSummaryResponse = zod.object({
   "sourceLabel": zod.string(),
   "companyName": zod.string().nullable(),
   "jobTitle": zod.string().nullable(),
-  "riskScore": zod.number().int().min(getDashboardSummaryResponseRecentAnalysesItemRiskScoreMin).max(getDashboardSummaryResponseRecentAnalysesItemRiskScoreMax),
-  "riskLevel": zod.enum(['lower', 'moderate', 'elevated', 'insufficient_evidence']),
+  "overallAssessment": zod.enum(['evidence_of_concern', 'conflicting_evidence', 'no_major_warnings', 'insufficient_evidence']),
+  "assessmentRationale": zod.string(),
   "verificationStatus": zod.enum(['official_match', 'partial_match', 'no_match', 'unable_to_verify', 'material_discrepancy']),
   "findingCount": zod.number().int()
 }))

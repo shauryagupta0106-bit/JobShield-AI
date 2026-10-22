@@ -14,4 +14,5 @@ export const VerificationCheckStatus = {
   partial: 'partial',
   discrepancy: 'discrepancy',
   unable_to_verify: 'unable_to_verify',
+  not_checked: 'not_checked',
 } as const;

@@ -5,9 +5,11 @@
  * JobShield AI analysis, research, and private-session history API
  * OpenAPI spec version: 0.1.0
  */
+import type { VerificationCheckCategory } from './verificationCheckCategory';
 import type { VerificationCheckStatus } from './verificationCheckStatus';
 
 export interface VerificationCheck {
+  category: VerificationCheckCategory;
   label: string;
   status: VerificationCheckStatus;
   /** @nullable */
@@ -15,4 +17,6 @@ export interface VerificationCheck {
   /** @nullable */
   observedValue: string | null;
   explanation: string;
+  /** @nullable */
+  sourceUrl?: string | null;
 }

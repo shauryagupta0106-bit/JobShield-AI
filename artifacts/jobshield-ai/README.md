@@ -21,7 +21,7 @@ The workspace has managed workflows for the API server and web app. Configure th
 | `DATABASE_URL` | Yes | PostgreSQL connection used by the shared workspace database |
 | `SESSION_SECRET` | Yes | Signs anonymous browser-session cookies |
 | `TINYFISH_API_KEY` | Optional | Enables live public-source search and page retrieval |
-| `OPENAI_API_KEY` | Optional | Reserved for an optional model-backed explanation provider |
+| `GROQ_API_KEY` | Optional | Groq API key for structured AI explanations and claim analysis |
 
 Apply the database schema with:
 
@@ -35,6 +35,36 @@ The managed workflows run:
 pnpm --filter @workspace/api-server run dev
 pnpm --filter @workspace/jobshield-ai run dev
 ```
+
+## Run locally on Windows
+
+The simplest and recommended method is running `pnpm dev` from the repository root:
+
+```powershell
+cd C:\Users\dell\Downloads\hack\JobShield-AI
+pnpm install
+pnpm dev
+```
+
+This starts:
+- API Server: `http://localhost:5000` (Health: `http://localhost:5000/api/health`)
+- Web UI: `http://localhost:3000` (Proxying `/api` to `http://localhost:5000`)
+
+Alternatively, you can run services in two separate terminals without manually setting conflicting `$env:PORT` variables:
+
+In Terminal 1 (API Server):
+```powershell
+pnpm --filter @workspace/api-server run dev
+```
+
+In Terminal 2 (Web UI):
+```powershell
+pnpm --filter @workspace/jobshield-ai run dev
+```
+
+Open `http://localhost:5173`. The Vite development server proxies `/api` to
+`API_SERVER_URL`. `TINYFISH_API_KEY` is optional and enables public-source
+research; the deterministic checks and app UI do not require it.
 
 ## Check the project
 

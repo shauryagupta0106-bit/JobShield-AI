@@ -43,12 +43,14 @@ All routes are mounted under `/api`. The source-of-truth contract is [`lib/api-s
 
 ## Report semantics
 
-- `riskScore` is a versioned, rule-based indicator from 0–100; it is not a probability.
-- `riskLevel` can be `lower`, `moderate`, `elevated`, or `insufficient_evidence`.
-- `verificationStatus` describes what could be found in public excerpts; it does not authenticate a recruiter.
+- `overallAssessment` is an evidence-grounded status (`evidence_of_concern`, `conflicting_evidence`, `no_major_warnings`, `insufficient_evidence`). There is no numerical risk score or percentage gauge.
+- `assessmentRationale` summarizes why the status was assigned based on corroborating sources and detected warning patterns.
+- `verificationChecks` categorizes evidence into Company Identity, Job Vacancy, Recruiter & Contact, and Offer Terms checks (`supported`, `mismatch`, `inconclusive`, `not_checked`).
+- `offerDetails` contains structured extraction (compensation, employment type, location, contact email, deadline).
+- `questionsForRecruiter` provides tailored, copyable questions for the applicant to ask before proceeding.
 - `researchStatus` distinguishes completed, unavailable, partial, and not-configured research.
-- `aiStatus` reports whether the optional AI explanation provider is configured.
-- Evidence URLs and excerpts are source leads. A result labeled `official_candidate` is a search candidate, not a verified official source.
+- `aiStatus` reports whether the Groq AI explanation provider is configured or completed.
+- Evidence URLs and excerpts are source leads. A result labeled `official_candidate` is a search candidate, not a verified official source. Absence of detected warnings is never proof of legitimacy.
 
 ## Limits and errors
 

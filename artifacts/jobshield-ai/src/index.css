@@ -124,3 +124,22 @@
   background-size: 36px 36px;
 }
 .focus-ring:focus-visible { outline: 3px solid rgba(37,99,235,.3); outline-offset: 2px; }
+
+@media print {
+  header, footer, nav, .print\:hidden {
+    display: none !important;
+  }
+  body, html {
+    background: #ffffff !important;
+    color: #172b4d !important;
+  }
+  .report-container {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  section, article, header {
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+}

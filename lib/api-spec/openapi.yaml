@@ -277,13 +277,11 @@ components:
           type: [string, "null"]
         applicationDomain:
           type: [string, "null"]
-        riskScore:
-          type: integer
-          minimum: 0
-          maximum: 100
-        riskLevel:
+        overallAssessment:
           type: string
-          enum: [lower, moderate, elevated, insufficient_evidence]
+          enum: [evidence_of_concern, conflicting_evidence, no_major_warnings, insufficient_evidence]
+        assessmentRationale:
+          type: string
         verificationStatus:
           type: string
           enum: [official_match, partial_match, no_match, unable_to_verify, material_discrepancy]
@@ -301,6 +299,12 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/VerificationCheck"
+        offerDetails:
+          $ref: "#/components/schemas/OfferDetails"
+        questionsForRecruiter:
+          type: array
+          items:
+            type: string
         recommendedNextSteps:
           type: array
           items:
@@ -326,18 +330,34 @@ components:
         - jobTitle
         - companyDomain
         - applicationDomain
-        - riskScore
-        - riskLevel
+        - overallAssessment
+        - assessmentRationale
         - verificationStatus
         - summary
         - findings
         - evidence
         - checks
+        - offerDetails
+        - questionsForRecruiter
         - recommendedNextSteps
         - limitations
         - researchStatus
         - aiStatus
         - methodologyVersion
+    OfferDetails:
+      type: object
+      properties:
+        compensation:
+          type: [string, "null"]
+        employmentType:
+          type: [string, "null"]
+        location:
+          type: [string, "null"]
+        contactEmail:
+          type: [string, "null"]
+        deadline:
+          type: [string, "null"]
+      required: [compensation, employmentType, location, contactEmail, deadline]
     AnalysisFinding:
       type: object
       properties:
@@ -355,6 +375,8 @@ components:
         recommendedAction:
           type: string
         evidenceUrl:
+          type: [string, "null"]
+        evidenceExcerpt:
           type: [string, "null"]
       required: [code, title, severity, description, whyItMatters, recommendedAction, evidenceUrl]
     EvidenceSource:
@@ -382,18 +404,23 @@ components:
     VerificationCheck:
       type: object
       properties:
+        category:
+          type: string
+          enum: [company_identity, job_vacancy, recruiter_contact, offer_terms]
         label:
           type: string
         status:
           type: string
-          enum: [match, partial, discrepancy, unable_to_verify]
+          enum: [match, partial, discrepancy, unable_to_verify, not_checked]
         submittedValue:
           type: [string, "null"]
         observedValue:
           type: [string, "null"]
         explanation:
           type: string
-      required: [label, status, submittedValue, observedValue, explanation]
+        sourceUrl:
+          type: [string, "null"]
+      required: [category, label, status, submittedValue, observedValue, explanation]
     AnalysisSummary:
       type: object
       properties:
@@ -412,31 +439,29 @@ components:
           type: [string, "null"]
         jobTitle:
           type: [string, "null"]
-        riskScore:
-          type: integer
-          minimum: 0
-          maximum: 100
-        riskLevel:
+        overallAssessment:
           type: string
-          enum: [lower, moderate, elevated, insufficient_evidence]
+          enum: [evidence_of_concern, conflicting_evidence, no_major_warnings, insufficient_evidence]
+        assessmentRationale:
+          type: string
         verificationStatus:
           type: string
           enum: [official_match, partial_match, no_match, unable_to_verify, material_discrepancy]
         findingCount:
           type: integer
-      required: [id, createdAt, sourceType, sourceLabel, companyName, jobTitle, riskScore, riskLevel, verificationStatus, findingCount]
+      required: [id, createdAt, sourceType, sourceLabel, companyName, jobTitle, overallAssessment, assessmentRationale, verificationStatus, findingCount]
     DashboardSummary:
       type: object
       properties:
         totalAnalyses:
           type: integer
-        elevatedCount:
+        concernCount:
           type: integer
         recentAnalyses:
           type: array
           items:
             $ref: "#/components/schemas/AnalysisSummary"
-      required: [totalAnalyses, elevatedCount, recentAnalyses]
+      required: [totalAnalyses, concernCount, recentAnalyses]
     CompanySearchResponse:
       type: object
       properties:

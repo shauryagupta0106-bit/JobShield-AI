@@ -43,8 +43,12 @@ export const jobShieldAnalysesTable = pgTable(
     sourceLabel: varchar("source_label", { length: 180 }).notNull(),
     companyName: varchar("company_name", { length: 120 }),
     jobTitle: varchar("job_title", { length: 120 }),
-    riskScore: integer("risk_score").notNull(),
-    riskLevel: jobShieldRiskLevel("risk_level").notNull(),
+    overallAssessment: varchar("overall_assessment", { length: 64 })
+      .notNull()
+      .default("insufficient_evidence"),
+    assessmentRationale: text("assessment_rationale"),
+    riskScore: integer("risk_score").default(0),
+    riskLevel: jobShieldRiskLevel("risk_level").default("insufficient_evidence"),
     verificationStatus: jobShieldVerificationStatus(
       "verification_status",
     ).notNull(),

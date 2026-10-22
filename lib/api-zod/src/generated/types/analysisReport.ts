@@ -7,11 +7,12 @@
  */
 import type { AnalysisFinding } from './analysisFinding';
 import type { AnalysisReportAiStatus } from './analysisReportAiStatus';
+import type { AnalysisReportOverallAssessment } from './analysisReportOverallAssessment';
 import type { AnalysisReportResearchStatus } from './analysisReportResearchStatus';
-import type { AnalysisReportRiskLevel } from './analysisReportRiskLevel';
 import type { AnalysisReportSourceType } from './analysisReportSourceType';
 import type { AnalysisReportVerificationStatus } from './analysisReportVerificationStatus';
 import type { EvidenceSource } from './evidenceSource';
+import type { OfferDetails } from './offerDetails';
 import type { VerificationCheck } from './verificationCheck';
 
 export interface AnalysisReport {
@@ -27,17 +28,15 @@ export interface AnalysisReport {
   companyDomain: string | null;
   /** @nullable */
   applicationDomain: string | null;
-  /**
-     * @minimum 0
-     * @maximum 100
-     */
-  riskScore: number;
-  riskLevel: AnalysisReportRiskLevel;
+  overallAssessment: AnalysisReportOverallAssessment;
+  assessmentRationale: string;
   verificationStatus: AnalysisReportVerificationStatus;
   summary: string;
   findings: AnalysisFinding[];
   evidence: EvidenceSource[];
   checks: VerificationCheck[];
+  offerDetails: OfferDetails;
+  questionsForRecruiter: string[];
   recommendedNextSteps: string[];
   limitations: string[];
   researchStatus: AnalysisReportResearchStatus;

@@ -1,19 +1,34 @@
-import app from "./app";
-import { logger } from "./lib/logger";
+import { existsSync } from "node:fs";
+import path from "node:path";
 
-const rawPort = process.env["PORT"];
+// Attempt to load .env before importing application components
+for (const envPath of [
+  path.resolve(process.cwd(), ".env"),
+  path.resolve(process.cwd(), "../../.env"),
+  path.resolve(import.meta.dirname, "../../../.env"),
+]) {
+  if (existsSync(envPath)) {
+    try {
+      process.loadEnvFile(envPath);
+      break;
+    } catch {
+      // ignore load errors
+    }
+  }
+}
 
-if (!rawPort) {
+// Validate required SESSION_SECRET before starting
+if (!process.env.SESSION_SECRET?.trim()) {
   throw new Error(
-    "PORT environment variable is required but was not provided.",
+    "SESSION_SECRET is not set. Please set SESSION_SECRET to a secure secret in your .env file (e.g., SESSION_SECRET=your-random-secret-key-at-least-32-chars).",
   );
 }
 
-const port = Number(rawPort);
+const rawPort = process.env.PORT;
+const port = rawPort && !Number.isNaN(Number(rawPort)) && Number(rawPort) > 0 ? Number(rawPort) : 5000;
 
-if (Number.isNaN(port) || port <= 0) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
-}
+import app from "./app";
+import { logger } from "./lib/logger";
 
 app.listen(port, (err) => {
   if (err) {
@@ -21,5 +36,13 @@ app.listen(port, (err) => {
     process.exit(1);
   }
 
-  logger.info({ port }, "Server listening");
+  logger.info(
+    {
+      port,
+      tinyFishConfigured: Boolean(process.env.TINYFISH_API_KEY?.trim()),
+      groqConfigured: Boolean(process.env.GROQ_API_KEY?.trim()),
+      databaseConfigured: Boolean(process.env.DATABASE_URL?.trim()),
+    },
+    "JobShield API server listening",
+  );
 });

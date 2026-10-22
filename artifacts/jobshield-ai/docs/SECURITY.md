@@ -27,7 +27,7 @@ Pasted job text is sent to the API when submitted. Optional web research sends l
 
 ## Operational checklist
 
-- Keep `DATABASE_URL`, `SESSION_SECRET`, `TINYFISH_API_KEY`, and optional `OPENAI_API_KEY` in Replit Secrets.
+- Keep `DATABASE_URL`, `SESSION_SECRET`, `TINYFISH_API_KEY`, and `GROQ_API_KEY` in environment secrets.
 - Use HTTPS in production and rotate session secrets through the environment-secret workflow.
 - Review provider data retention and regional processing policies before sending user data.
 - Apply dependency updates and rerun the type checks, tests, and production build.
