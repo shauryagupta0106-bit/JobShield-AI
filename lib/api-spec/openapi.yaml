@@ -3,13 +3,15 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: JobShield AI analysis, research, and private-session history API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: jobshield
+    description: Job opportunity analysis and private history
 paths:
   /healthz:
     get:
@@ -24,6 +26,186 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /analyze:
+    post:
+      operationId: analyzeSubmission
+      tags: [jobshield]
+      summary: Analyze pasted job text or text extracted from a PDF
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnalyzeInput"
+      responses:
+        "200":
+          description: Evidence-backed analysis report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysisReport"
+        "400":
+          description: Invalid or incomplete submission
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "413":
+          description: Submission exceeds the supported size
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /analyze-url:
+    post:
+      operationId: analyzeUrl
+      tags: [jobshield]
+      summary: Safely analyze a public job listing URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnalyzeUrlInput"
+      responses:
+        "200":
+          description: Evidence-backed analysis report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysisReport"
+        "400":
+          description: Invalid or unsafe URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "413":
+          description: Submission exceeds the supported size
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /analyses:
+    get:
+      operationId: listAnalyses
+      tags: [jobshield]
+      summary: List analyses from the current private browser session
+      parameters:
+        - in: query
+          name: q
+          required: false
+          schema:
+            type: string
+            maxLength: 120
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        "200":
+          description: Recent analyses for this browser session
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AnalysisSummary"
+  /analyses/{id}:
+    get:
+      operationId: getAnalysis
+      tags: [jobshield]
+      summary: Retrieve one analysis from the current private browser session
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Analysis report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysisReport"
+        "404":
+          description: Analysis was not found in this session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteAnalysis
+      tags: [jobshield]
+      summary: Delete one analysis from the current private browser session
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Analysis deleted
+        "404":
+          description: Analysis was not found in this session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /analyses/clear:
+    delete:
+      operationId: clearAnalyses
+      tags: [jobshield]
+      summary: Delete all analyses from the current private browser session
+      responses:
+        "204":
+          description: Session history deleted
+  /dashboard:
+    get:
+      operationId: getDashboardSummary
+      tags: [jobshield]
+      summary: Get a summary of analyses in the current private session
+      responses:
+        "200":
+          description: Session dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+  /companies/search:
+    get:
+      operationId: searchCompanySources
+      tags: [jobshield]
+      summary: Find public sources related to a company or job opportunity
+      parameters:
+        - in: query
+          name: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 160
+      responses:
+        "200":
+          description: Live public search results, not identity verification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompanySearchResponse"
+        "503":
+          description: Live search is not configured or temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +215,260 @@ components:
           type: string
       required:
         - status
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+    AnalyzeInput:
+      type: object
+      properties:
+        inputType:
+          type: string
+          enum: [text, pdf]
+        content:
+          type: string
+          minLength: 20
+          maxLength: 50000
+        sourceLabel:
+          type: string
+          maxLength: 180
+        companyHint:
+          type: string
+          maxLength: 120
+        roleHint:
+          type: string
+          maxLength: 120
+      required: [inputType, content]
+    AnalyzeUrlInput:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+          maxLength: 2048
+        companyHint:
+          type: string
+          maxLength: 120
+        roleHint:
+          type: string
+          maxLength: 120
+      required: [url]
+    AnalysisReport:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        sourceType:
+          type: string
+          enum: [url, text, pdf]
+        sourceLabel:
+          type: string
+        companyName:
+          type: [string, "null"]
+        jobTitle:
+          type: [string, "null"]
+        companyDomain:
+          type: [string, "null"]
+        applicationDomain:
+          type: [string, "null"]
+        riskScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+        riskLevel:
+          type: string
+          enum: [lower, moderate, elevated, insufficient_evidence]
+        verificationStatus:
+          type: string
+          enum: [official_match, partial_match, no_match, unable_to_verify, material_discrepancy]
+        summary:
+          type: string
+        findings:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalysisFinding"
+        evidence:
+          type: array
+          items:
+            $ref: "#/components/schemas/EvidenceSource"
+        checks:
+          type: array
+          items:
+            $ref: "#/components/schemas/VerificationCheck"
+        recommendedNextSteps:
+          type: array
+          items:
+            type: string
+        limitations:
+          type: array
+          items:
+            type: string
+        researchStatus:
+          type: string
+          enum: [completed, partial, unavailable, not_configured]
+        aiStatus:
+          type: string
+          enum: [completed, unavailable, not_configured]
+        methodologyVersion:
+          type: string
+      required:
+        - id
+        - createdAt
+        - sourceType
+        - sourceLabel
+        - companyName
+        - jobTitle
+        - companyDomain
+        - applicationDomain
+        - riskScore
+        - riskLevel
+        - verificationStatus
+        - summary
+        - findings
+        - evidence
+        - checks
+        - recommendedNextSteps
+        - limitations
+        - researchStatus
+        - aiStatus
+        - methodologyVersion
+    AnalysisFinding:
+      type: object
+      properties:
+        code:
+          type: string
+        title:
+          type: string
+        severity:
+          type: string
+          enum: [info, caution, elevated]
+        description:
+          type: string
+        whyItMatters:
+          type: string
+        recommendedAction:
+          type: string
+        evidenceUrl:
+          type: [string, "null"]
+      required: [code, title, severity, description, whyItMatters, recommendedAction, evidenceUrl]
+    EvidenceSource:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+        title:
+          type: string
+        domain:
+          type: string
+        sourceType:
+          type: string
+          enum: [official_candidate, public, submitted]
+        excerpt:
+          type: string
+        retrievedAt:
+          type: [string, "null"]
+          format: date-time
+        relationship:
+          type: string
+          enum: [supports, contradicts, context, unknown]
+      required: [url, title, domain, sourceType, excerpt, retrievedAt, relationship]
+    VerificationCheck:
+      type: object
+      properties:
+        label:
+          type: string
+        status:
+          type: string
+          enum: [match, partial, discrepancy, unable_to_verify]
+        submittedValue:
+          type: [string, "null"]
+        observedValue:
+          type: [string, "null"]
+        explanation:
+          type: string
+      required: [label, status, submittedValue, observedValue, explanation]
+    AnalysisSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        sourceType:
+          type: string
+          enum: [url, text, pdf]
+        sourceLabel:
+          type: string
+        companyName:
+          type: [string, "null"]
+        jobTitle:
+          type: [string, "null"]
+        riskScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+        riskLevel:
+          type: string
+          enum: [lower, moderate, elevated, insufficient_evidence]
+        verificationStatus:
+          type: string
+          enum: [official_match, partial_match, no_match, unable_to_verify, material_discrepancy]
+        findingCount:
+          type: integer
+      required: [id, createdAt, sourceType, sourceLabel, companyName, jobTitle, riskScore, riskLevel, verificationStatus, findingCount]
+    DashboardSummary:
+      type: object
+      properties:
+        totalAnalyses:
+          type: integer
+        elevatedCount:
+          type: integer
+        recentAnalyses:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalysisSummary"
+      required: [totalAnalyses, elevatedCount, recentAnalyses]
+    CompanySearchResponse:
+      type: object
+      properties:
+        query:
+          type: string
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicSearchResult"
+        retrievedAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [completed, not_configured, unavailable]
+        note:
+          type: string
+      required: [query, results, retrievedAt, status, note]
+    PublicSearchResult:
+      type: object
+      properties:
+        title:
+          type: string
+        url:
+          type: string
+          format: uri
+        domain:
+          type: string
+        snippet:
+          type: string
+        publishedAt:
+          type: [string, "null"]
+          format: date
+      required: [title, url, domain, snippet, publishedAt]
 

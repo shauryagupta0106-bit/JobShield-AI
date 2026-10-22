@@ -3,3 +3,12 @@
 
 # No need to store the pnpm store twice.
 .local
+
+# Keep local credentials out of deploy bundles.
+.env
+.env.*
+!.env.example
+
+# Generated bundles are rebuilt by the workflows and deployment build.
+/artifacts/api-server/dist
+/artifacts/jobshield-ai/dist
