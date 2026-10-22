@@ -37,25 +37,23 @@ function toError(value: unknown): Error {
 
 function DefaultFallback({ error, resetError }: ErrorFallbackProps) {
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 p-6">
-      <div className="max-w-lg w-full text-center">
-        <h1 className="text-xl font-semibold text-gray-900">
+    <div className="flex min-h-[60vh] w-full items-center justify-center p-6">
+      <div className="w-full max-w-lg rounded-2xl border border-[#D8DFD5] bg-white p-8 text-center shadow-xs">
+        <h1 className="font-display text-xl font-bold text-[#171A19]">
           Something went wrong
         </h1>
-        <p className="mt-2 text-sm text-gray-600">
-          This part of the app hit an error. The rest of the app is still
-          running.
+        <p className="mt-2 text-xs leading-relaxed text-[#616965]">
+          An unexpected error occurred while rendering this view.
         </p>
-        {/* Dev only: messages can carry API responses and other internals. */}
         {import.meta.env.DEV ? (
-          <pre className="mt-4 overflow-x-auto rounded bg-gray-100 p-3 text-left text-xs text-gray-800">
+          <pre className="mt-4 overflow-x-auto rounded-xl border border-[#D8DFD5] bg-[#FAF9F5] p-3 text-left font-mono text-[11px] text-[#C94F45]">
             {error.message || String(error)}
           </pre>
         ) : null}
         <button
           type="button"
           onClick={resetError}
-          className="mt-4 rounded bg-gray-900 px-4 py-2 text-sm text-white hover:bg-gray-700"
+          className="mt-5 inline-flex h-10 items-center justify-center rounded-xl bg-[#C7F36B] px-5 font-bold text-[#171A19] shadow-xs transition hover:bg-[#BCEE57]"
         >
           Try again
         </button>

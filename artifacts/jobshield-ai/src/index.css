@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Manrope:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @plugin "@tailwindcss/typography";
@@ -56,74 +56,93 @@
 
 :root {
   color-scheme: light;
-  --background: 0 0% 100%;
-  --foreground: 217 53% 20%;
-  --border: 216 28% 92%;
-  --input: 216 28% 92%;
-  --ring: 217 91% 56%;
-  --card: 0 0% 100%;
-  --card-foreground: 217 53% 20%;
-  --card-border: 216 28% 92%;
+  /* Obsidian + Warm Ivory + Signal Lime System */
+  --background: 45 27% 95%;          /* Warm Ivory: #F6F4EE */
+  --foreground: 165 5% 10%;          /* Obsidian Ink: #171A19 */
+  --border: 103 12% 86%;              /* Soft Sage Border: #D8DFD5 */
+  --input: 103 12% 86%;               /* #D8DFD5 */
+  --ring: 80 83% 69%;                 /* Signal Lime: #C7F36B */
+  --card: 0 0% 100%;                  /* Pure White: #FFFFFF */
+  --card-foreground: 165 5% 10%;      /* Obsidian Ink: #171A19 */
+  --card-border: 100 10% 89%;         /* Subtle Card Border: #E2E6DF */
   --popover: 0 0% 100%;
-  --popover-foreground: 217 53% 20%;
-  --popover-border: 216 28% 92%;
-  --primary: 217 91% 56%;
-  --primary-foreground: 0 0% 100%;
-  --primary-border: 217 91% 48%;
-  --secondary: 214 33% 97%;
-  --secondary-foreground: 217 53% 20%;
-  --secondary-border: 216 28% 92%;
-  --muted: 214 33% 97%;
-  --muted-foreground: 218 11% 46%;
-  --muted-border: 216 28% 92%;
-  --accent: 172 83% 34%;
-  --accent-foreground: 0 0% 100%;
-  --accent-border: 172 83% 29%;
-  --destructive: 0 72% 47%;
+  --popover-foreground: 165 5% 10%;
+  --popover-border: 100 10% 89%;
+  --primary: 80 83% 69%;              /* Signal Lime: #C7F36B */
+  --primary-foreground: 165 5% 10%;   /* Obsidian text on Lime */
+  --primary-border: 80 75% 58%;
+  --secondary: 106 14% 91%;           /* Soft Sage: #E6EBE4 */
+  --secondary-foreground: 165 5% 10%;
+  --secondary-border: 103 12% 86%;
+  --muted: 106 14% 91%;               /* Soft Sage: #E6EBE4 */
+  --muted-foreground: 150 4% 39%;     /* Neutral Gray: #616965 */
+  --muted-border: 103 12% 86%;
+  --accent: 165 5% 10%;               /* Obsidian Ink */
+  --accent-foreground: 45 27% 95%;    /* Warm Ivory */
+  --accent-border: 165 5% 15%;
+  --destructive: 4 55% 53%;           /* Alert Coral: #C94F45 */
   --destructive-foreground: 0 0% 100%;
-  --destructive-border: 0 72% 42%;
-  --chart-1: 217 91% 56%;
-  --chart-2: 172 83% 34%;
-  --chart-3: 35 100% 36%;
-  --chart-4: 137 70% 30%;
-  --chart-5: 0 72% 47%;
-  --sidebar: 214 33% 97%;
-  --sidebar-foreground: 217 53% 20%;
-  --sidebar-border: 216 28% 92%;
-  --sidebar-primary: 217 91% 56%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 210 40% 94%;
-  --sidebar-accent-foreground: 217 53% 20%;
-  --sidebar-ring: 217 91% 56%;
-  --app-font-sans: 'DM Sans', sans-serif;
+  --destructive-border: 4 60% 45%;
+  --chart-1: 80 83% 69%;              /* Signal Lime */
+  --chart-2: 165 5% 10%;              /* Obsidian */
+  --chart-3: 37 87% 38%;              /* Amber */
+  --chart-4: 139 47% 33%;             /* Olive */
+  --chart-5: 4 55% 53%;               /* Coral */
+  --sidebar: 165 5% 10%;
+  --sidebar-foreground: 45 27% 95%;
+  --sidebar-border: 165 5% 15%;
+  --sidebar-primary: 80 83% 69%;
+  --sidebar-primary-foreground: 165 5% 10%;
+  --sidebar-accent: 165 5% 15%;
+  --sidebar-accent-foreground: 45 27% 95%;
+  --sidebar-ring: 80 83% 69%;
+  --app-font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --app-font-serif: Georgia, serif;
-  --app-font-mono: 'SFMono-Regular', Consolas, monospace;
-  --radius: 0.7rem;
-  --button-outline: rgba(23, 43, 77, .1);
-  --badge-outline: rgba(23, 43, 77, .06);
+  --app-font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+  --radius: 0.75rem;
+  --button-outline: rgba(23, 26, 25, 0.12);
+  --badge-outline: rgba(23, 26, 25, 0.08);
   --opaque-button-border-intensity: -8;
-  --elevate-1: rgba(23, 43, 77, .025);
-  --elevate-2: rgba(23, 43, 77, .06);
+  --elevate-1: rgba(23, 26, 25, 0.02);
+  --elevate-2: rgba(23, 26, 25, 0.05);
   --tracking-normal: 0em;
-  --spacing: .25rem;
+  --spacing: 0.25rem;
 }
 
 @layer base {
   * { @apply border-border; }
-  html { min-width: 320px; background: #fff; }
-  body { @apply font-sans antialiased bg-background text-foreground; margin: 0; }
+  html {
+    min-width: 320px;
+    background-color: #F6F4EE;
+    color: #171A19;
+  }
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    margin: 0;
+    background-color: #F6F4EE;
+    color: #171A19;
+  }
   button, input, textarea { font: inherit; }
-  ::selection { background: #dceaff; color: #172b4d; }
+  ::selection {
+    background: #C7F36B;
+    color: #171A19;
+  }
 }
 
-.font-display { font-family: 'Manrope', sans-serif; }
-.page-enter { animation: page-enter .36s ease-out both; }
-@keyframes page-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.font-display { font-family: 'Manrope', -apple-system, sans-serif; }
+.font-mono { font-family: 'JetBrains Mono', monospace; }
+.page-enter { animation: page-enter .32s cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes page-enter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
 .soft-grid {
-  background-image: linear-gradient(to right, rgba(23,43,77,.045) 1px, transparent 1px), linear-gradient(to bottom, rgba(23,43,77,.045) 1px, transparent 1px);
-  background-size: 36px 36px;
+  background-image: linear-gradient(to right, rgba(23, 26, 25, 0.04) 1px, transparent 1px), linear-gradient(to bottom, rgba(23, 26, 25, 0.04) 1px, transparent 1px);
+  background-size: 32px 32px;
 }
-.focus-ring:focus-visible { outline: 3px solid rgba(37,99,235,.3); outline-offset: 2px; }
+
+.focus-ring:focus-visible {
+  outline: 2px solid #171A19;
+  outline-offset: 2px;
+}
 
 @media print {
   header, footer, nav, .print\:hidden {
@@ -131,7 +150,7 @@
   }
   body, html {
     background: #ffffff !important;
-    color: #172b4d !important;
+    color: #171A19 !important;
   }
   .report-container {
     max-width: 100% !important;
