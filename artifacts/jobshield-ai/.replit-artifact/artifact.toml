@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "JobShield AI"
+description = "A job and internship verification app that helps students and early-career professionals inspect suspicious listings, messages, and links with transparent risk signals, evidence, and practical next steps."
+version = "1.0.0"
+id = "artifacts/jobshield-ai"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25533
+
+[services.development]
+run = "pnpm --filter @workspace/jobshield-ai run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/jobshield-ai", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/jobshield-ai/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25533"
+BASE_PATH = "/"

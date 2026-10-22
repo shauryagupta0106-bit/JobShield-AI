@@ -1,0 +1,1099 @@
+# JOBSHIELD AI: ULTIMATE MASTER BUILD PROMPT
+## Build a Complete, Beautiful, Production-Quality Hackathon Project From Start to Finish
+
+Act as my senior full-stack software engineer, product architect, UI/UX designer, AI engineer, cybersecurity specialist, database engineer, QA engineer, DevOps engineer, and technical mentor.
+
+Your responsibility is to **actually build JobShield AI as a complete, working, beautifully designed web application**, not merely provide code snippets, a plan, a landing page, a prototype, or a presentation.
+
+Use the tools available in your environment to inspect files, create and edit source code, install dependencies, run commands, test the application, diagnose errors, and fix them. Continue working through the implementation until the acceptance criteria at the end of this prompt have been met, or until a genuine external blocker prevents further progress.
+
+I am a beginner. Make sensible engineering decisions independently, explain important steps in plain English, and do not make me choose between technologies unnecessarily.
+
+Do not stop after producing an architecture plan. Start building.
+
+# PART 1: PRODUCT VISION
+
+## 1.1 Project identity
+
+**Product name:** JobShield AI
+
+**Tagline:** Verify Before You Apply.
+
+**Product category:** AI-powered job and internship verification platform.
+
+**Primary audience:**
+- College students searching for internships.
+- Fresh graduates applying for their first jobs.
+- Early-career professionals.
+- Job seekers receiving recruitment messages through social media, email, messaging apps, job boards, and unofficial websites.
+
+**Core promise:**
+
+Help people investigate suspicious job opportunities by comparing the claims in a job listing with available evidence, identifying warning signals, and explaining what they should verify before taking action.
+
+JobShield AI must feel like a credible, thoughtfully designed cybersecurity product that an actual startup could launch. It must combine excellent visual design, practical functionality, transparent analysis, and responsible handling of evidence.
+
+## 1.2 The problem
+
+Job seekers may encounter:
+- Job advertisements that impersonate real companies.
+- Fake recruiters using legitimate company names or branding.
+- Requests for registration, interview, training, security deposit, or other upfront payments.
+- Suspicious application links and domains.
+- Salary, role, location, or eligibility claims that conflict with other sources.
+- Misleading job descriptions copied from legitimate vacancies.
+- Recruitment messages that pressure people into acting immediately.
+- Opportunities that are difficult to verify using manual internet searches.
+
+Users often need to open multiple websites, compare company career pages, inspect recruiter details, and interpret inconsistent information themselves.
+
+## 1.3 Our solution
+
+JobShield AI should let users submit a job opportunity through one interface and receive a structured, evidence-backed investigation report.
+
+The platform should:
+1. Accept a job URL, pasted job text, recruiter message, or supported PDF document.
+2. Extract the relevant details.
+3. Identify potential warning signals using transparent rules.
+4. Research relevant public web pages using TinyFish Search and Fetch.
+5. Compare the submitted claims with available official and corroborating sources.
+6. Use an LLM for structured extraction and clear explanations when configured.
+7. Present source links, supporting excerpts, discrepancies, limitations, and recommended next steps.
+8. Allow users to report suspicious opportunities through a moderated workflow, where implemented.
+
+The product must never guarantee that a job is genuine or fraudulent.
+
+# PART 2: MANDATORY VISUAL DESIGN
+
+## 2.1 Absolutely white theme
+
+**The entire application must use a white, light-theme design. Do not use a dark theme anywhere.**
+
+This requirement applies to:
+- Landing page.
+- Navigation bar.
+- Dashboard.
+- Analysis forms.
+- Results pages.
+- Company profiles.
+- Community reports.
+- Admin dashboard.
+- Login and registration pages, if implemented.
+- Modals, dropdowns, sidebars, tooltips, charts, tables, and loading states.
+- Mobile and desktop layouts.
+- Documentation screenshots and demo screens.
+
+Do not create a dark mode toggle. Do not automatically switch to dark mode based on operating-system preferences. Do not use black backgrounds or dark cybersecurity-dashboard styling.
+
+The application should look professionally designed by a skilled human product designer, not like a generic AI-generated website.
+
+## 2.2 Design system
+
+Use the following palette consistently.
+
+- Main background: `#FFFFFF`
+- Secondary background: `#F7F9FC`
+- Primary navy text: `#172B4D`
+- Body text: `#344054`
+- Primary blue: `#2563EB`
+- Teal accent: `#0F9F91`
+- Border: `#E4E9F0`
+- Muted text: `#667085`
+- Success: `#16803D`
+- Warning: `#B76E00`
+- Error: `#C62828`
+
+Use warning colors only when relevant to actual interface states. Do not make the entire product red because it deals with scams.
+
+Typography:
+- Use Inter, Manrope, or a comparable professional sans-serif font.
+- Use clear heading hierarchy.
+- Maintain readable body text.
+- Avoid excessive uppercase text.
+- Avoid tiny labels and illegible dashboard details.
+
+Layout:
+- Use a consistent spacing system.
+- Use a restrained 8-point spacing scale.
+- Use subtle borders and shadows.
+- Use moderate corner radii.
+- Maintain generous but efficient spacing.
+- Use consistent alignment and grid proportions.
+- Keep content readable at common laptop and mobile widths.
+
+## 2.3 Avoid the generic AI-generated look
+
+Do not rely on:
+- Purple and blue gradients everywhere.
+- Glowing neon effects.
+- Floating glassmorphism cards on every section.
+- Random blobs and abstract decorative shapes.
+- Excessive emojis.
+- Unnecessary animated backgrounds.
+- Huge headings with almost no useful content.
+- Repetitive card grids for every page.
+- Generic robot illustrations.
+- Unrelated stock photographs.
+- Fake activity counters.
+- Fake customer testimonials.
+- Fake company logos or fabricated trust badges.
+- Buttons that do nothing.
+- Placeholder content left in the finished product.
+
+Instead, use a restrained editorial design style, polished data tables, realistic product mockups, thoughtful typography, relevant illustrations, meaningful charts, and excellent information hierarchy.
+
+Use animations sparingly. Prefer small transitions, loading indicators, subtle hover effects, and clear feedback.
+
+## 2.4 Logo and visual identity
+
+Create a simple, original JobShield AI brand mark using an appropriate shield, verification, or evidence-related motif.
+
+The logo must work on white backgrounds and at small sizes.
+
+Create a consistent visual identity across:
+- Favicon.
+- Navigation.
+- Landing page.
+- Dashboard.
+- Report pages.
+- Documentation.
+- Presentation assets, where applicable.
+
+Do not use another company's logo or copy a protected brand identity.
+
+## 2.5 Responsive design
+
+The application must work on:
+- Desktop and laptop.
+- Tablet.
+- Mobile phones.
+
+Use responsive navigation, readable mobile layouts, properly sized controls, and tables that adapt gracefully.
+
+No horizontal page overflow, clipped text, overlapping cards, or buttons hidden outside the viewport.
+
+# PART 3: TECHNOLOGY STACK
+
+Use this stack unless an existing repository contains a working implementation that should be preserved.
+
+### Frontend
+- React.
+- Vite.
+- JavaScript or TypeScript, preferably TypeScript if it does not unnecessarily slow the MVP.
+- Tailwind CSS or a well-organized CSS design system.
+- React Router for navigation.
+- Lucide icons or another consistent, permitted icon library.
+- A chart library only where charts provide meaningful value.
+
+### Backend
+- Python.
+- FastAPI.
+- Pydantic for request and response validation.
+- HTTPX or an equivalent maintained HTTP client.
+- Pytest for backend testing.
+
+### Live web research
+- TinyFish Search API.
+- TinyFish Fetch API.
+
+Use TinyFish Agent or Browser only if a specific, necessary workflow cannot reasonably be completed with Search and Fetch.
+
+### AI
+- One configurable LLM provider with structured output support.
+- A provider abstraction so the application does not depend unnecessarily on one vendor.
+
+The model must assist with extracting claims and explaining evidence. Deterministic code must handle explicit checks, structured comparisons, scoring rules, and validation.
+
+### Database
+- Supabase.
+- PostgreSQL.
+- Supabase Auth if authentication is needed for protected functionality.
+
+Use a migration or schema file to make database setup reproducible.
+
+### Document processing
+- A maintained PDF text-extraction library such as PyMuPDF.
+- Clear validation for unsupported, empty, encrypted, or oversized files.
+- OCR only if needed and feasible.
+
+### Development and deployment
+- Git.
+- `.gitignore`.
+- Environment variables.
+- `.env.example` files without real secrets.
+- Automated tests.
+- A suitable frontend hosting platform.
+- A Python-compatible backend hosting platform.
+- Deployment instructions and health checks.
+
+Do not introduce unnecessary microservices, Kubernetes, blockchain, a separate vector database, or extra infrastructure unless a concrete requirement justifies it.
+
+# PART 4: REQUIRED APPLICATION PAGES
+
+Build a complete, connected application with the following pages.
+
+## Page 1: Landing page
+
+Create a premium, light-themed homepage that immediately communicates the product.
+
+Include:
+
+**Navigation**
+- JobShield AI logo.
+- Home.
+- How It Works.
+- Features.
+- Safety Guide.
+- Check a Job button.
+
+**Hero section**
+
+Headline:
+
+"Not Sure About That Job Offer? Investigate Before You Apply."
+
+Supporting copy:
+
+"Check job listings against available evidence, uncover warning signs, and understand what to verify before sharing your money or personal information."
+
+Primary button: "Check a Job"
+
+Secondary button: "How It Works"
+
+Use a realistic illustration or mockup of the actual report interface.
+
+Do not use fake customer statistics or claims such as "99% accurate."
+
+**How it works**
+
+Explain the submit, investigate, compare, and review workflow in four steps.
+
+**Key features**
+
+Show:
+- Job listing analysis.
+- Official-source cross-checking.
+- Payment-request detection.
+- Recruiter and domain signals.
+- Evidence-backed explanations.
+- Practical next steps.
+
+**Why evidence matters**
+
+Explain that a company can be legitimate while an individual recruiter or advertisement impersonating it is not.
+
+**Safety guide preview**
+
+Highlight common warning signals and safe verification habits.
+
+**Final call to action**
+
+Invite users to analyze an opportunity.
+
+**Footer**
+
+Include product navigation, privacy information, limitations, documentation, and relevant contact or repository links when available.
+
+Do not invent social links, email addresses, partnerships, or external URLs.
+
+## Page 2: Job analysis page
+
+This is the central product experience.
+
+Build a polished form that allows the user to choose among:
+
+1. Analyze a URL.
+2. Paste job description or recruiter message.
+3. Upload a supported PDF.
+
+The form must contain:
+- Input type selector.
+- URL input with validation.
+- Multiline text area.
+- PDF file picker with file-size restrictions.
+- Optional context fields if useful.
+- Privacy and safety notice.
+- Clear Analyze button.
+
+Only display fields relevant to the selected input type.
+
+The form must actually submit to the backend.
+
+Provide:
+- Client-side validation.
+- Server-side validation.
+- Loading states.
+- Progress messages based on actual processing stages.
+- Error handling.
+- Retry guidance.
+- Accessible controls.
+
+Do not use a fake progress bar that pretends research is happening.
+
+## Page 3: Analysis results page
+
+Create a polished, readable report page.
+
+Include:
+
+**A. Summary**
+- Short explanation of the findings.
+- Overall verification status.
+- Important limitations.
+
+**B. Warning signals**
+- Specific warning signal.
+- Severity.
+- Evidence supporting it.
+- Why it matters.
+- Suggested action.
+
+**C. Official-source comparison**
+- Submitted company and role.
+- Matching company or vacancy information, if found.
+- Differences in job title, location, salary, recruiter details, or other relevant fields.
+- Links to sources.
+- Retrieval timestamps when available.
+
+**D. Evidence cards**
+- Source title.
+- Source URL.
+- Source type.
+- Relevant excerpt.
+- Retrieved time.
+- Which claim the source supports or contradicts.
+- Confidence or evidence quality, if defined by a transparent method.
+
+**E. Recommended next steps**
+- Contact the company through an independently located official channel.
+- Check the official careers website.
+- Avoid paying recruitment or registration fees until independently verified.
+- Do not share sensitive documents with unverified recipients.
+- Report suspicious behavior through appropriate channels when warranted.
+
+**F. Actions**
+- Copy report summary.
+- Print or save the report using a supported implementation.
+- Return to the checker.
+- Submit a community report, if implemented.
+
+Use clear status labels such as:
+- Official match found.
+- Partial match.
+- No match found.
+- Unable to verify.
+- Material discrepancy found.
+
+Never equate "no match found" with "fraud confirmed."
+
+Never display invented evidence or pretend a live search succeeded when it did not.
+
+## Page 4: Analysis history and dashboard
+
+Create a useful dashboard with:
+- Previous analyses.
+- Date.
+- Company or opportunity name, if available.
+- Verification status.
+- Number of findings.
+- Link to the report.
+- Search and filtering.
+
+If the user is not authenticated, provide a privacy-conscious local session history or explain that history is temporary. Do not silently persist sensitive job documents in browser storage.
+
+If authentication is implemented, use proper server-side authorization and user-scoped database queries.
+
+## Page 5: Company profiles
+
+Build a company directory and profile page if database functionality is configured.
+
+Include:
+- Company name.
+- Official website, where verified.
+- Official careers page, where found.
+- Available verified vacancy references.
+- Moderated community reports.
+- Source-backed observations.
+- Last checked date.
+- Clear uncertainty labels.
+
+Company records must distinguish:
+- Official information.
+- Public-source observations.
+- User-submitted allegations.
+- Moderator decisions.
+
+Do not automatically blacklist a company because a user submitted a complaint.
+
+Do not treat an employer's overall legitimacy as proof that every recruiter using its name is legitimate.
+
+## Page 6: Community reporting
+
+Allow users to submit reports about suspicious recruitment experiences.
+
+Include:
+- Company or opportunity.
+- Public listing URL, where available.
+- Description of the experience.
+- Warning category.
+- Optional evidence links.
+- Consent and privacy notice.
+
+Provide moderation states such as:
+- Pending review.
+- Under review.
+- Published after moderation.
+- Rejected.
+- Resolved or corrected.
+
+Do not publicly expose personal phone numbers, private emails, identity documents, or unverified personal accusations.
+
+Do not publish reports automatically without appropriate safeguards.
+
+## Page 7: Admin moderation
+
+Implement a protected moderation area if community reporting is included.
+
+Administrators should be able to:
+- Review pending reports.
+- Inspect submitted evidence.
+- Approve, reject, or request changes.
+- Record a moderation reason.
+- Correct inaccurate records.
+- Track moderation actions.
+- Review abuse reports.
+
+Protect administrator operations on the backend. Hiding an admin button in the frontend is not sufficient authorization.
+
+If proper authentication and authorization cannot be configured without credentials, document the exact setup required and keep privileged operations disabled rather than insecure.
+
+## Page 8: Safety guide
+
+Create a practical, attractive resource page explaining:
+- Recruitment fee warning signs.
+- Company impersonation.
+- Suspicious domains.
+- Recruiter email verification.
+- Unrealistic promises combined with other warning signs.
+- Safe document sharing.
+- Independent verification through official channels.
+- What to do if someone has already paid money.
+
+Use authoritative resources and working links where possible.
+
+Do not offer legal or financial guarantees.
+
+# PART 5: BUILD THE ANALYSIS ENGINE
+
+The backend must contain real, testable analysis logic.
+
+Create separate modules for:
+- Input validation.
+- Document extraction.
+- URL safety.
+- TinyFish API communication.
+- Company and vacancy matching.
+- Job-description comparison.
+- Warning-signal detection.
+- LLM-assisted extraction and explanation.
+- Evidence validation.
+- Risk assessment.
+- Report construction.
+
+Avoid putting the entire application into one enormous file.
+
+## 5.1 Input extraction
+
+Extract structured information when available:
+- Company name.
+- Job title.
+- Location.
+- Employment type.
+- Salary or compensation.
+- Recruiter name.
+- Recruiter email.
+- Recruiter phone, where supplied.
+- Application URL.
+- Domain.
+- Payment requests.
+- Urgency or pressure language.
+- Eligibility criteria.
+- Contact instructions.
+
+Each field should support unknown or missing values. Do not guess missing information.
+
+## 5.2 Rule-based warning signals
+
+Implement explicit, understandable checks, such as:
+- Recruitment, registration, interview, or training fee requests.
+- Requests for deposits or payment before employment.
+- Mismatch between a claimed official domain and the supplied application domain.
+- Contradictory company, role, salary, or location details.
+- Suspicious urgency or guaranteed-job claims.
+- Missing or inconsistent recruiter identity.
+- Links that redirect to unexpected domains.
+- Job descriptions that substantially differ from the purported official vacancy.
+
+Rules should explain why they fired.
+
+Do not automatically treat high salary, poor grammar, an absent listing, or a small company as proof of fraud.
+
+Use a versioned scoring methodology. If a score is shown, label it a heuristic risk indicator rather than a probability unless independently validated.
+
+Where evidence is insufficient, show an insufficient-evidence or unable-to-verify status.
+
+## 5.3 TinyFish Search and Fetch integration
+
+Read the current official TinyFish documentation before implementing the integration.
+
+Use the documented API endpoints, authentication header, request bodies, response formats, error codes, and rate limits.
+
+Requirements:
+- Store the API key in a backend environment variable.
+- Never expose the key to frontend JavaScript.
+- Add connection timeouts.
+- Handle HTTP errors and rate limits.
+- Parse responses safely.
+- Preserve source URLs.
+- Store retrieval timestamps.
+- Deduplicate relevant sources.
+- Avoid unnecessary requests.
+- Provide a graceful error state when the service is unavailable.
+
+Use Search to discover relevant public sources and Fetch to retrieve pages where supported.
+
+Prioritize official company domains and career pages. Use other sources as corroborating evidence rather than treating search ranking as proof.
+
+Do not invent API responses or fake successful research.
+
+If credentials are missing, implement the integration properly, add a clear configuration guide, and make the unavailable state explicit. Never silently substitute fabricated results.
+
+## 5.4 Company and vacancy matching
+
+Implement a matching service that compares:
+- Company names and known aliases.
+- Official website domains.
+- Job titles.
+- Locations.
+- Job identifiers, where available.
+- Salary ranges and currency.
+- Employment types.
+- Job description text.
+
+Normalize whitespace, case, punctuation, and common formatting differences.
+
+Use deterministic matching first. Add text similarity where appropriate. Keep the match explanation visible.
+
+Do not confuse similar names with verified identity.
+
+A company match and a recruiter identity match are separate checks.
+
+## 5.5 LLM integration
+
+Create a dedicated LLM service with:
+- Configurable provider and model.
+- Backend-only API key.
+- Structured output validation.
+- Timeouts and sensible retry behavior.
+- Clear error handling.
+- Prompt-injection defenses.
+- A deterministic fallback for basic checks.
+
+The model must not invent sources, evidence, company details, or claims.
+
+Use a constrained schema that separates:
+- Extracted claims.
+- Observed evidence.
+- Rule-based warnings.
+- Inferences.
+- Unknowns.
+- Recommended next steps.
+
+Treat retrieved webpages, PDFs, and submitted messages as untrusted content. Instructions found inside those materials must never override system rules or trigger unauthorized actions.
+
+If the LLM is unavailable, the application should still be able to return deterministic findings with an honest explanation of reduced functionality.
+
+## 5.6 Evidence-backed reporting
+
+Every material finding should include:
+- What was checked.
+- What was observed.
+- Which source supports the observation.
+- How the observation relates to the submitted claim.
+- Why it matters.
+- What remains uncertain.
+- What the user can do next.
+
+Never fabricate citations.
+
+If a source cannot be accessed, label it unavailable.
+
+If evidence conflicts, show the conflict rather than hiding it.
+
+# PART 6: DATABASE AND API
+
+## 6.1 Database schema
+
+Create a maintainable relational schema for the features that are implemented.
+
+Potential tables:
+- `profiles`
+- `companies`
+- `job_listings`
+- `analyses`
+- `evidence`
+- `analysis_findings`
+- `community_reports`
+- `moderation_actions`
+
+Use appropriate:
+- Primary keys.
+- Foreign keys.
+- Timestamps.
+- Status constraints.
+- Indexes.
+- Unique constraints where justified.
+- Database migrations.
+- Row-level security policies when using Supabase.
+
+Do not store unnecessary sensitive personal information.
+
+Define retention and deletion behavior for submitted documents and analysis data.
+
+Never commit database credentials or service-role keys.
+
+## 6.2 API endpoints
+
+Implement and document the endpoints needed for the actual product.
+
+At minimum:
+
+- `GET /api/health`
+- `POST /api/analyze`
+- `POST /api/analyze-url`
+- `GET /api/analyses/{id}`
+
+Add endpoints for history, companies, reports, authentication-related operations, or moderation only when the corresponding features are implemented.
+
+Use:
+- Pydantic schemas.
+- Consistent JSON responses.
+- Proper HTTP status codes.
+- Input size limits.
+- Request timeouts.
+- Useful error messages without leaking secrets.
+- Pagination for potentially large collections.
+
+Provide interactive FastAPI documentation through its standard OpenAPI interface.
+
+# PART 7: SECURITY AND PRIVACY
+
+Treat security as a core product requirement.
+
+Implement and test:
+
+### URL safety and SSRF protection
+- Accept only supported HTTP and HTTPS URLs.
+- Reject localhost, loopback, private, link-local, and restricted network destinations.
+- Block cloud metadata endpoints and unsupported schemes.
+- Validate DNS resolution where appropriate.
+- Revalidate redirects.
+- Prevent the backend from fetching arbitrary internal services.
+- Apply timeouts and response-size limits.
+- Avoid unsafe unrestricted redirects.
+
+Do not assume that a simple string check alone is sufficient for SSRF protection.
+
+### File safety
+- Restrict accepted file types.
+- Validate actual content where possible, not just filename extensions.
+- Set file-size and processing limits.
+- Reject unsupported or malformed documents safely.
+- Avoid executing uploaded content.
+- Clean up temporary files.
+
+### Secrets
+- Keep API keys and database secrets on the server.
+- Add `.env` files to `.gitignore`.
+- Provide `.env.example` files with placeholders only.
+- Never print secrets into logs.
+- Never include real keys in documentation or frontend bundles.
+
+### Prompt injection
+- Treat webpage and document content as data, not instructions.
+- Do not allow external content to override the analysis policy.
+- Validate all model outputs against a schema.
+- Never allow retrieved content to trigger arbitrary tools or privileged actions.
+
+### Privacy
+- Minimize data collection.
+- Explain how uploaded content is used.
+- Avoid logging complete documents or unnecessary personal information.
+- Do not publicly expose private recruiter details.
+- Provide deletion or retention behavior appropriate to the implemented features.
+- Avoid sending unnecessary sensitive data to external AI providers.
+
+### Database and authorization
+- Apply row-level security where appropriate.
+- Scope user records correctly.
+- Protect admin actions on the backend.
+- Never rely on frontend-only permissions.
+
+# PART 8: ERROR HANDLING AND USER EXPERIENCE
+
+Every important action must have a complete user experience.
+
+Implement:
+- Loading states.
+- Empty states.
+- Validation errors.
+- Network errors.
+- API rate-limit messages.
+- Missing API key messages.
+- Unsupported document messages.
+- Search failure messages.
+- Partial-result messages.
+- Database failure handling.
+- Retry actions where safe.
+- Success confirmations.
+
+Do not leave buttons decorative.
+
+Do not show success before an operation succeeds.
+
+Do not replace failed backend operations with fake successful reports.
+
+When a check is unavailable, show the user exactly what could not be checked.
+
+# PART 9: RECOMMENDED PROJECT STRUCTURE
+
+Create a clean, maintainable repository. Adapt it to the existing project if appropriate.
+
+```text
+jobshield-ai/
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── layout/
+│   │   │   ├── forms/
+│   │   │   ├── reports/
+│   │   │   ├── evidence/
+│   │   │   └── ui/
+│   │   ├── pages/
+│   │   ├── services/
+│   │   ├── hooks/
+│   │   ├── types/
+│   │   ├── utils/
+│   │   ├── styles/
+│   │   ├── App.tsx
+│   │   └── main.tsx
+│   ├── public/
+│   ├── .env.example
+│   └── package.json
+├── backend/
+│   ├── app/
+│   │   ├── main.py
+│   │   ├── config.py
+│   │   ├── schemas.py
+│   │   ├── routes/
+│   │   ├── services/
+│   │   ├── security/
+│   │   ├── database/
+│   │   └── utils/
+│   ├── tests/
+│   ├── .env.example
+│   └── requirements.txt
+├── database/
+│   └── migrations/
+├── docs/
+│   ├── architecture.md
+│   ├── api.md
+│   ├── security.md
+│   ├── privacy.md
+│   ├── testing.md
+│   └── deployment.md
+├── sample-data/
+├── .gitignore
+├── README.md
+└── LICENSE
+```
+
+Use an appropriate license only after selecting one intentionally. Do not assume the project has a license already.
+
+# PART 10: TESTING AND QUALITY ASSURANCE
+
+Write and run real tests.
+
+## Backend tests
+- Health endpoint.
+- Input validation.
+- URL validation.
+- Risk-rule behavior.
+- Company and vacancy matching.
+- Evidence formatting.
+- LLM output validation.
+- TinyFish success and error handling using mocked external responses.
+- File validation.
+- SSRF protection.
+- Authentication and authorization for protected operations.
+- Database access controls where testable.
+
+## Frontend tests
+- Main page rendering.
+- Form validation.
+- Input type switching.
+- Loading and error states.
+- API response rendering.
+- Evidence links.
+- Mobile navigation.
+- Accessible labels and keyboard interaction.
+
+## Integration tests
+- Frontend can communicate with the backend.
+- Backend can process valid text input.
+- Invalid input produces a useful error.
+- Failed external research produces an honest partial or unavailable result.
+- The report displays actual backend findings.
+- Database persistence works when configured.
+
+## Manual acceptance tests
+
+Use the browser, if available, to:
+1. Open the application.
+2. Navigate through its pages.
+3. Submit a sample job listing.
+4. Confirm the backend receives the request.
+5. Inspect the returned analysis.
+6. Test an invalid URL.
+7. Test missing API credentials.
+8. Check the mobile layout.
+9. Check that no dark theme appears.
+10. Check that no buttons are nonfunctional.
+
+Fix errors discovered during testing. Do not merely list them in the README.
+
+Use fictional sample data for demonstrations. Clearly identify it as fictional and never present it as verified live research.
+
+# PART 11: DEPLOYMENT
+
+Prepare the application for a reproducible deployment.
+
+Include:
+- Frontend deployment configuration.
+- Backend deployment configuration.
+- Environment variable documentation.
+- Supabase schema and migration instructions.
+- CORS configuration.
+- Health-check endpoint.
+- Build commands.
+- Start commands.
+- Dependency installation commands.
+- Troubleshooting instructions.
+
+Use separate development and production configuration.
+
+Never hardcode `localhost` into the production frontend API configuration.
+
+If deployment credentials are unavailable, finish the deployable code and provide exact instructions for the user to deploy it. Do not claim that a public deployment exists unless it has actually succeeded.
+
+# PART 12: DOCUMENTATION AND HACKATHON DELIVERABLES
+
+Create a comprehensive README containing:
+
+1. Project overview.
+2. Problem statement.
+3. Proposed solution.
+4. Key features.
+5. Architecture diagram.
+6. Technology stack.
+7. Folder structure.
+8. Prerequisites.
+9. Installation instructions.
+10. Environment variable setup.
+11. Database setup.
+12. How to run the frontend.
+13. How to run the backend.
+14. How to run tests.
+15. API documentation.
+16. Security safeguards.
+17. Privacy limitations.
+18. Known limitations.
+19. Deployment instructions.
+20. Future improvements.
+
+Also create:
+- Architecture documentation.
+- Database schema documentation.
+- API documentation.
+- Testing report based on actual test results.
+- Security and privacy notes.
+- Sample fictional job listings for demos.
+- A concise demo script.
+- A final list of required environment variables.
+
+If possible, generate a professional architecture diagram as an editable diagram or Mermaid source file.
+
+Do not claim tests passed unless you actually ran them.
+
+# PART 13: EXECUTION WORKFLOW
+
+Follow this implementation order.
+
+### Phase 1: Inspect and plan
+- Inspect the current workspace and existing files.
+- Identify the operating environment and installed tools.
+- Preserve useful existing code.
+- Check the current official documentation for external APIs.
+- Produce a concise implementation checklist.
+- Begin implementation immediately.
+
+### Phase 2: Build the visual foundation
+- Set up the frontend.
+- Establish the white-only design system.
+- Implement responsive navigation, typography, spacing, buttons, forms, cards, and status indicators.
+- Build the landing page and analysis form.
+- Ensure the visual design is coherent before duplicating components across pages.
+
+### Phase 3: Build the backend
+- Create the FastAPI application.
+- Add configuration and environment variables.
+- Create schemas, routes, and service modules.
+- Implement validation and security checks.
+- Add health and analysis endpoints.
+- Run the backend locally and test the API.
+
+### Phase 4: Implement real analysis
+- Add structured input extraction.
+- Implement deterministic warning rules.
+- Implement company and vacancy matching.
+- Integrate TinyFish Search and Fetch using the official documentation.
+- Add the LLM integration with structured output validation.
+- Build evidence-backed report generation.
+- Handle missing credentials and service failures honestly.
+
+### Phase 5: Connect the application
+- Connect frontend forms to real API endpoints.
+- Display actual analysis responses.
+- Implement loading, error, empty, and success states.
+- Build the report page.
+- Verify that the application works from submission to final report.
+
+### Phase 6: Database and secondary features
+- Add Supabase and PostgreSQL configuration.
+- Create schema and migrations.
+- Implement persistence where configured.
+- Add history, company profiles, community reporting, and moderation according to the available time and dependencies.
+- Secure all privileged actions.
+
+### Phase 7: Quality and polish
+- Run automated tests.
+- Fix build errors.
+- Fix runtime errors.
+- Inspect the UI at desktop and mobile widths.
+- Improve typography, spacing, contrast, alignment, and consistency.
+- Remove placeholder links, dead buttons, debug messages, and accidental dark styling.
+- Verify that the interface looks professional and intentional.
+
+### Phase 8: Deployment and submission
+- Complete README and documentation.
+- Verify the production build.
+- Prepare deployment instructions.
+- Run final acceptance tests.
+- Summarize exactly what works, what requires external credentials, and what remains incomplete.
+
+Do not stop at the end of a phase just to ask whether you should continue. Continue through the dependency order whenever tools and available credentials permit.
+
+If an external credential is missing, build and test everything that can be tested without it, document the exact setup, and clearly identify the affected functionality.
+
+If you encounter an error, investigate the actual cause, fix it, and rerun the relevant test.
+
+# PART 14: ENGINEERING RULES
+
+1. Write maintainable, modular code.
+2. Use descriptive names and clear types.
+3. Avoid unnecessary abstractions.
+4. Do not duplicate large amounts of logic.
+5. Do not leave placeholder implementations in features marked as complete.
+6. Do not fabricate external API responses.
+7. Do not commit credentials.
+8. Do not hide errors.
+9. Do not claim deployment or testing succeeded without verification.
+10. Keep frontend and backend responsibilities separate.
+11. Validate all external inputs.
+12. Keep API secrets on the backend.
+13. Keep the design light and white throughout.
+14. Ensure important buttons perform real actions.
+15. Preserve existing work unless a change is necessary.
+16. Explain important commands in beginner-friendly language.
+17. Prefer a smaller, genuinely working feature over a larger fake feature.
+18. Use official, current documentation for external integrations.
+19. Do not make unsupported accusations against real companies.
+20. Do not claim the system is production-secure without an appropriate security review.
+
+# PART 15: DEFINITION OF DONE
+
+The project is not complete merely because the frontend renders.
+
+Consider the project complete only when the following checklist has been addressed and the status of each item has been verified.
+
+## Product
+- [ ] Professional landing page.
+- [ ] White-only theme across every page.
+- [ ] Responsive desktop and mobile layouts.
+- [ ] Working job analysis form.
+- [ ] Real backend connection.
+- [ ] Functional analysis report.
+- [ ] Evidence and source links when research succeeds.
+- [ ] Honest error and unavailable states.
+- [ ] Working navigation and primary actions.
+
+## Intelligence
+- [ ] Deterministic warning rules.
+- [ ] Structured claim extraction.
+- [ ] Company and vacancy matching.
+- [ ] TinyFish integration implemented against current documentation.
+- [ ] LLM integration implemented when credentials are available.
+- [ ] Evidence-backed explanations.
+- [ ] Uncertainty and limitations represented correctly.
+
+## Data and security
+- [ ] Database schema and setup instructions.
+- [ ] Secure environment variable handling.
+- [ ] URL and SSRF safeguards.
+- [ ] File validation.
+- [ ] Appropriate authorization and access controls.
+- [ ] Privacy-conscious handling of submitted data.
+- [ ] No automatic company blacklisting.
+
+## Quality
+- [ ] Backend tests executed.
+- [ ] Frontend build succeeds.
+- [ ] Relevant frontend tests executed.
+- [ ] API integration checked.
+- [ ] Important error cases tested.
+- [ ] Desktop and mobile layouts inspected.
+- [ ] No fake success states.
+- [ ] No nonfunctional buttons presented as completed features.
+
+## Submission
+- [ ] Complete README.
+- [ ] Architecture documentation.
+- [ ] Database documentation.
+- [ ] API documentation.
+- [ ] Testing report based on actual results.
+- [ ] Security and privacy notes.
+- [ ] Demo instructions.
+- [ ] Deployment instructions.
+- [ ] Final limitations and setup requirements.
+
+At the end, provide a concise build report listing:
+- What you implemented.
+- Which commands you ran.
+- Which tests passed and failed.
+- Whether the frontend and backend run successfully.
+- Which external credentials are still needed.
+- Which features are genuinely functional.
+- Which features remain incomplete.
+- Exact commands to launch the complete application locally.
+
+**FINAL INSTRUCTION: Start by inspecting the project workspace and available tools. Then build JobShield AI in dependency order, test it, improve the visual design, and finish the documentation. Do not return only a plan or a code sample. Work toward a complete, working application with a polished white design and honest, evidence-backed functionality.**
